@@ -1,0 +1,20 @@
+{
+ "id": "dQw4w9WgXcQ",
+ "title": "Rick Astley - Never Gonna Give You Up (Official Video) (4K Remaster)",
+ "channel": "Rick Astley",
+ "duration": 213,
+ "is_live": false,
+ "requested_formats": [
+  {
+   "url": "https://rr2---sn-0hvcpax-30ak.googlevideo.com/videoplayback?expire=4102444800&ei=4AwGa4XJILWp9fwP46DrkAg&ip=2405%3A3800%3A9a4%3A9a5b%3Abe24%3A11ff%3Afed2%3A693e&id=o-AD74F6qr5fSebBYt8X23Zm2JXUuwx1qzT9hL-xma1XQb&itag=251&source=youtube&requiressl=yes&xpc=EgVo2aDSNQ%3D%3D&cps=622&met=1795558624%2C&mh=7c&mm=18%2C29&mn=sn-0hvcpax-30ak%2Csn-2o30ac-52&ms=aub%2Crdu&mv=m&mvi=2&pcm2cms=yes&pl=32&rms=aub%2Caub&pcm2=no&initcwndbps=1108875&bui=AZFAFb-8axrLAJ6do9_bQX5zBQ_o4Rexc5hRrq8zNOEIgVQjxL-T-PmmF0N9Kh8QTDVH9WC66LGWVMS1&spc=nfZ8ZtYx4T0NNfAhx60sQhu5Cb6KR2iR&vprv=1&svpuc=1&mime=audio%2Fwebm&ns=ahPPkm81bDTXpQBfahBuVloa&rqh=1&gir=yes&clen=3433755&dur=213.061&lmt=1766955883819090&mt=1795558421&fvip=5&epbp=1&keepalive=yes&lmw=1&fexp=51565115&c=TVHTML5&sefc=1&txp=5532534&n=b7eZw66M4yB10A&sparams=expire%2Cei%2Cip%2Cid%2Citag%2Csource%2Crequiressl%2Cxpc%2Cpcm2%2Cbui%2Cspc%2Cvprv%2Csvpuc%2Cmime%2Cns%2Crqh%2Cgir%2Cclen%2Cdur%2Clmt&lsparams=cps%2Cmet%2Cmh%2Cmm%2Cmn%2Cms%2Cmv%2Cmvi%2Cpcm2cms%2Cpl%2Crms%2Cinitcwndbps&lsig=APaTxxMwRQIgOW-BOLk528baWIsI5y-s9KiEtVCUajA8EKh8GuHnVDcCIQDO_gMeXx0NADok8WblwDLAXhvASHwFeiiyht401y_sKA%3D%3D&sig=AE0s2JYwRAIgDDmRs-RwSW55YCM_8J6VZyhob2h8IcCXiV-gKENUC3wCIAhMfqU-VXiEdGAOrEatsJb_6D5GY0ymyHNeJY70FzRt",
+   "protocol": "https",
+   "ext": "webm",
+   "http_headers": {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-us,en;q=0.5",
+    "Sec-Fetch-Mode": "navigate"
+   }
+  }
+ ]
+}

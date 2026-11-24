@@ -1,0 +1,14 @@
+assets/bin/
+build/
+.dart_tool/
+*.iml
+.idea/
+android/local.properties
+android/key.properties
+*.jks
+android/app/src/main/jniLibs/
+dist/
+.gradle/
+.flutter-plugins-dependencies
+.claude/
+CLAUDE.md
