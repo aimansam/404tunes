@@ -53,6 +53,19 @@ Linux needs `libmpv` at runtime too (`sudo apt install libmpv2`, or `libmpv-dev`
 The Windows and macOS binaries are fetched by the script, but those platforms can only be built on Windows / macOS.
 macOS: the bundled quickjs is the Apple-silicon build.
 
+### Release signing (Android)
+
+Release APKs are signed with the key named in `android/key.properties` (not in git, together with the `.jks` keystore). Without that file the
+release build falls back to the debug key, so a fresh clone still builds. To make your own key:
+
+```bash
+keytool -genkeypair -keystore android/my-release.jks -storetype PKCS12 -alias myalias -keyalg RSA -keysize 4096 -validity 36500
+# android/key.properties:
+#   storePassword=...   keyPassword=...   keyAlias=myalias   storeFile=my-release.jks   (path relative to android/)
+```
+
+Keep the keystore and its password backed up: an app can only be updated in place by APKs signed with the same key.
+
 ## Tests
 
 ```bash
