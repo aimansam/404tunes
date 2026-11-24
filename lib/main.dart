@@ -23,9 +23,10 @@ import 'yt/ytdlp_service.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Linux and Windows play audio through libmpv; Android and macOS use the platform player.
-  if (Platform.isLinux || Platform.isWindows) {
-    JustAudioMediaKit.ensureInitialized(linux: true, windows: true);
+  // Desktop plays audio through libmpv (media_kit): it handles the WebM/Opus audio YouTube serves, which the
+  // macOS system player cannot. Android uses ExoPlayer.
+  if (Platform.isLinux || Platform.isWindows || Platform.isMacOS) {
+    JustAudioMediaKit.ensureInitialized(linux: true, windows: true, macOS: true);
   }
 
   final YtBackend backend = Platform.isAndroid ? AndroidBackend() : DesktopBackend();

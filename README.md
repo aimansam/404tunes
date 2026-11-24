@@ -66,6 +66,26 @@ keytool -genkeypair -keystore android/my-release.jks -storetype PKCS12 -alias my
 
 Keep the keystore and its password backed up: an app can only be updated in place by APKs signed with the same key.
 
+### Releases (GitHub Actions)
+
+`.github/workflows/release.yml` builds Android, Linux, Windows and macOS (Apple silicon) and attaches them to a release when you push a version tag:
+
+```bash
+git tag v0.2.0 && git push origin v0.2.0
+```
+
+A tag build refuses to run without the signing secrets, so debug-signed APKs can't be published by accident. Add them once under
+Settings → Secrets and variables → Actions, or with the `gh` CLI:
+
+```bash
+base64 -w0 android/404tunes-release.jks | gh secret set ANDROID_KEYSTORE_BASE64
+gh secret set ANDROID_KEYSTORE_PASSWORD        # the password in android/key.properties
+gh secret set ANDROID_KEY_ALIAS --body tunes404
+```
+
+"Run workflow" on the Actions tab builds everything for testing and keeps the files as artifacts without making a release.
+The Windows and macOS builds are unsigned: Windows SmartScreen and macOS Gatekeeper will warn on first launch (macOS: right-click → Open).
+
 ## Tests
 
 ```bash
