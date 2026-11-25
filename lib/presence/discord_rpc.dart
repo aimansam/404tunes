@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ffi';
 import 'dart:io';
 import 'dart:typed_data';
+
+import 'package:ffi/ffi.dart';
 
 /// Where [DiscordRpc] sends the activity. The service talks to this, so tests can swap in a fake.
 abstract class ActivitySink {
@@ -9,6 +12,9 @@ abstract class ActivitySink {
   Future<bool> setActivity(Map<String, Object?> activity);
   Future<void> clearActivity();
   Future<void> disconnect();
+
+  /// Why the last attempt failed, for the settings screen.
+  String? get lastError;
 }
 
 /// A raw byte pipe to the Discord desktop app.
@@ -46,6 +52,7 @@ class DiscordRpc implements ActivitySink {
   int _nonce = 0;
 
   /// Last error text from Discord or the connection, for the settings screen.
+  @override
   String? lastError;
 
   bool get connected => _channel != null;
@@ -181,17 +188,9 @@ List<String> unixSocketPaths(Map<String, String> env) {
   ];
 }
 
-/// Connects to whichever Discord is running, or returns null.
+/// Connects to whichever Discord is running, or returns null. Throws when Discord seems to be there but refuses.
 Future<IpcChannel?> connectToDiscord() async {
-  if (Platform.isWindows) {
-    for (var i = 0; i < 10; i++) {
-      try {
-        final f = await File(r'\\.\pipe\discord-ipc-' '$i').open(mode: FileMode.append);
-        return _FileChannel(f);
-      } catch (_) {}
-    }
-    return null;
-  }
+  if (Platform.isWindows) return WindowsPipeChannel.connect();
   return connectToUnixPaths(unixSocketPaths(Platform.environment));
 }
 
@@ -261,28 +260,111 @@ class SocketChannel implements IpcChannel {
   }
 }
 
-/// [IpcChannel] over a Windows named pipe, opened as a file.
-class _FileChannel implements IpcChannel {
-  _FileChannel(this._file);
-  final RandomAccessFile _file;
+// ------------------------------------------------------------------ Windows named pipe
+
+typedef _CreateFileC = IntPtr Function(Pointer<Utf16>, Uint32, Uint32, Pointer<Void>, Uint32, Uint32, IntPtr);
+typedef _CreateFileD = int Function(Pointer<Utf16>, int, int, Pointer<Void>, int, int, int);
+typedef _IoC = Int32 Function(IntPtr, Pointer<Uint8>, Uint32, Pointer<Uint32>, Pointer<Void>);
+typedef _IoD = int Function(int, Pointer<Uint8>, int, Pointer<Uint32>, Pointer<Void>);
+typedef _PeekC = Int32 Function(IntPtr, Pointer<Void>, Uint32, Pointer<Uint32>, Pointer<Uint32>, Pointer<Uint32>);
+typedef _PeekD = int Function(int, Pointer<Void>, int, Pointer<Uint32>, Pointer<Uint32>, Pointer<Uint32>);
+
+/// [IpcChannel] over Discord's Windows named pipe, using the Win32 API directly. (Dart's own file API can't be used:
+/// it seeks to the end of a file it opens for writing, which a pipe does not allow.)
+/// Reading polls with PeekNamedPipe, so it never blocks the app's UI thread.
+class WindowsPipeChannel implements IpcChannel {
+  WindowsPipeChannel._(this._handle);
+  int _handle;
+
+  static const _genericRead = 0x80000000, _genericWrite = 0x40000000, _openExisting = 3;
+  static const _errNotFound = 2, _errPathNotFound = 3;
+
+  static final DynamicLibrary _k32 = DynamicLibrary.open('kernel32.dll');
+  static final _createFile = _k32.lookupFunction<_CreateFileC, _CreateFileD>('CreateFileW');
+  static final _readFile = _k32.lookupFunction<_IoC, _IoD>('ReadFile');
+  static final _writeFile = _k32.lookupFunction<_IoC, _IoD>('WriteFile');
+  static final _peek = _k32.lookupFunction<_PeekC, _PeekD>('PeekNamedPipe');
+  static final _closeHandle = _k32.lookupFunction<Int32 Function(IntPtr), int Function(int)>('CloseHandle');
+  static final _lastError = _k32.lookupFunction<Uint32 Function(), int Function()>('GetLastError');
+
+  /// Tries \\.\pipe\discord-ipc-0 to 9. Null when none exists (Discord is not running).
+  static Future<IpcChannel?> connect() async {
+    int? worst; // the most telling error that was not "no such pipe"
+    for (var i = 0; i < 10; i++) {
+      final name = '\\\\.\\pipe\\discord-ipc-$i'.toNativeUtf16();
+      try {
+        final h = _createFile(name, _genericRead | _genericWrite, 0, nullptr, _openExisting, 0, 0);
+        if (h != -1) return WindowsPipeChannel._(h);
+        final err = _lastError();
+        if (err != _errNotFound && err != _errPathNotFound) worst ??= err;
+      } finally {
+        calloc.free(name);
+      }
+    }
+    if (worst != null) {
+      throw StateError(worst == 5
+          ? 'Windows denied access to Discord (is one of the two apps running as administrator?)'
+          : 'Could not open Discord\'s pipe (Windows error $worst)');
+    }
+    return null;
+  }
 
   @override
   Future<void> write(List<int> bytes) async {
-    await _file.writeFrom(bytes);
-    await _file.flush();
+    final buf = calloc<Uint8>(bytes.length);
+    final done = calloc<Uint32>();
+    try {
+      buf.asTypedList(bytes.length).setAll(0, bytes);
+      var sent = 0;
+      while (sent < bytes.length) {
+        if (_handle == 0) throw StateError('Discord closed the connection');
+        if (_writeFile(_handle, buf + sent, bytes.length - sent, done, nullptr) == 0) {
+          throw StateError('Could not write to Discord (Windows error ${_lastError()})');
+        }
+        sent += done.value;
+      }
+    } finally {
+      calloc.free(buf);
+      calloc.free(done);
+    }
   }
 
   @override
   Future<Uint8List> read(int n) async {
-    final out = BytesBuilder(copy: false);
-    while (out.length < n) {
-      final chunk = await _file.read(n - out.length);
-      if (chunk.isEmpty) throw StateError('Discord closed the connection');
-      out.add(chunk);
+    final out = Uint8List(n);
+    final avail = calloc<Uint32>();
+    final got = calloc<Uint32>();
+    final buf = calloc<Uint8>(n);
+    try {
+      var have = 0;
+      while (have < n) {
+        if (_handle == 0) throw StateError('Discord closed the connection');
+        if (_peek(_handle, nullptr, 0, nullptr, avail, nullptr) == 0) {
+          throw StateError('Discord closed the connection (Windows error ${_lastError()})');
+        }
+        if (avail.value == 0) {
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+          continue;
+        }
+        final want = avail.value < n - have ? avail.value : n - have;
+        if (_readFile(_handle, buf, want, got, nullptr) == 0) {
+          throw StateError('Could not read from Discord (Windows error ${_lastError()})');
+        }
+        out.setRange(have, have + got.value, buf.asTypedList(got.value));
+        have += got.value;
+      }
+      return out;
+    } finally {
+      calloc.free(avail);
+      calloc.free(got);
+      calloc.free(buf);
     }
-    return out.takeBytes();
   }
 
   @override
-  Future<void> close() => _file.close();
+  Future<void> close() async {
+    final h = _handle;
+    _handle = 0;
+    if (h != 0) _closeHandle(h);
+  }
 }

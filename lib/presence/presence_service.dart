@@ -73,6 +73,9 @@ class PresenceService {
 
   final status = ValueNotifier<PresenceStatus>(PresenceStatus.off);
 
+  /// Why Discord could not be reached, when it could not.
+  String? get lastError => sink.lastError;
+
   Timer? _debounce, _poll, _retry;
   bool _shown = false;
   bool _busy = false, _again = false;

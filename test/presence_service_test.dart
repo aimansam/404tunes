@@ -7,6 +7,8 @@ class FakeSink implements ActivitySink {
   final calls = <String>[];
   final activities = <Map<String, Object?>>[];
   bool reachable = true;
+  @override
+  String? get lastError => reachable ? null : 'Discord is not running';
 
   @override
   Future<bool> setActivity(Map<String, Object?> activity) async {

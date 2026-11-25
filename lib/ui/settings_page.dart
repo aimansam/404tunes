@@ -117,7 +117,7 @@ class _SettingsPageState extends State<SettingsPage> {
               : s.discordEnabled && st == PresenceStatus.showing
                   ? 'Showing on Discord'
                   : s.discordEnabled && st == PresenceStatus.unavailable
-                      ? 'Discord not reachable: is the desktop app open?'
+                      ? 'Discord not reachable${presence.lastError == null ? '' : ': ${presence.lastError}'}'
                       : 'Shows "Listening to 404 Tunes" with the song while it plays. Needs the Discord desktop app open.'),
           value: s.discordEnabled && hasId,
           onChanged: hasId ? s.setDiscordEnabled : null,
