@@ -11,7 +11,7 @@ S = 3072          # master size; everything is downscaled from this for clean ed
 K = S / 1024      # SVG units -> pixels
 
 
-AMBER, MINT = (255, 176, 32), (0, 229, 160)
+FRINGE_L, FRINGE_R = (255, 55, 95), (10, 132, 255)     # glitch fringes: rose-red (left) and blue (right)
 NOTE_TOP, NOTE_BOT = (255, 255, 255), (240, 234, 255)     # white with a faint lavender fall-off
 
 
@@ -84,8 +84,8 @@ def art_layer(size=S, scale=1.0, mono=False):
 
     notes = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     # glitch fringes: amber / mint only where they stick out past the glass
-    notes.paste(AMBER + (205,), mask=ImageChops.subtract(note_mask(-gx, size, scale), body))
-    notes.paste(MINT + (205,), mask=ImageChops.subtract(note_mask(gx, size, scale), body))
+    notes.paste(FRINGE_L + (205,), mask=ImageChops.subtract(note_mask(-gx, size, scale), body))
+    notes.paste(FRINGE_R + (205,), mask=ImageChops.subtract(note_mask(gx, size, scale), body))
     # smoked glass body: a veil of white that is brightest at the top and fades to nearly clear
     ramp = np.clip((np.arange(size) - P(0, 230)[1]) / (P(0, 800)[1] - P(0, 230)[1]), 0, 1)
     vert = Image.fromarray(np.ascontiguousarray(np.broadcast_to((92 - 70 * ramp)[:, None], (size, size)).astype(np.uint8)), "L")
