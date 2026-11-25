@@ -113,11 +113,6 @@ def art_layer(size=S, scale=1.0, mono=False):
     # soft inner glow hugging the edge
     glow_in = ImageChops.subtract(body, body.filter(ImageFilter.GaussianBlur(16 * f)))
     notes.paste((255, 255, 255, 255), mask=ImageChops.multiply(glow_in, diag(size, 120, 20)))
-    # diagonal reflection across the glass
-    spec = Image.new("L", (size, size), 0)
-    ImageDraw.Draw(spec).polygon([P(590, 180), P(700, 180), P(420, 820), P(310, 820)], fill=255)
-    spec = ImageChops.multiply(spec.filter(ImageFilter.GaussianBlur(10 * f)).point(lambda v: v * 46 // 255), body)
-    notes.paste((255, 255, 255, 255), mask=spec)
     # rim light: thin and crisp, strongest toward the light (top left), a faint cool bounce at the bottom right
     sigma = 6 * f / 2.05
     inner = body.filter(ImageFilter.GaussianBlur(sigma)).point(lambda v: 255 if v >= 250 else 0)
@@ -143,16 +138,6 @@ def full_icon(pad=0.0):
     """Rounded-square icon on transparent; pad = fraction of the canvas left empty on each side."""
     icon = gradient(S)
     icon.alpha_composite(art_layer())
-    sheen = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-    ramp_a = (np.clip(1 - np.arange(S) / (S * 0.55), 0, 1) ** 2 * 26).astype(np.uint8)
-    sheen.putalpha(Image.fromarray(np.ascontiguousarray(np.broadcast_to(ramp_a[:, None], (S, S)))))
-    white = Image.new("RGBA", (S, S), (255, 255, 255, 255))
-    white.putalpha(sheen.getchannel("A"))
-    icon.alpha_composite(white)
-    streak = Image.new("L", (S, S), 0)
-    ImageDraw.Draw(streak).polygon([(0, 0), (S * 0.70, 0), (0, S * 0.70)], fill=255)
-    streak = streak.filter(ImageFilter.GaussianBlur(S / 60)).point(lambda v: v * 14 // 255)
-    icon.paste((255, 255, 255, 255), mask=streak)
     icon.putalpha(rounded(S))
     edge = Image.new("RGBA", (S, S), (0, 0, 0, 0))
     ImageDraw.Draw(edge).rounded_rectangle([0, 0, S - 1, S - 1], radius=S * 230 / 1024, outline=(255, 255, 255, 52), width=S // 340)
