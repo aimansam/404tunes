@@ -14,7 +14,7 @@ Future<TunesAudioHandler> initAudioService(PlayerController c) => AudioService.i
       builder: () => TunesAudioHandler(c),
       config: const AudioServiceConfig(
         androidNotificationChannelId: 'dev.tunes404.playback',
-        androidNotificationChannelName: '404tunes playback',
+        androidNotificationChannelName: '404 Tunes playback',
         androidNotificationOngoing: true,
         androidStopForegroundOnPause: true,
       ),

@@ -55,9 +55,9 @@ class _SetupAdminPageState extends State<SetupAdminPage> {
   @override
   Widget build(BuildContext context) => _Centered(
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Icon(Icons.graphic_eq, size: 56, color: Theme.of(context).colorScheme.primary),
+          Image.asset('assets/branding/logo.png', height: 96),
           const SizedBox(height: 12),
-          Text('Welcome to 404tunes', textAlign: TextAlign.center, style: Theme.of(context).textTheme.headlineSmall),
+          Text('Welcome to 404 Tunes', textAlign: TextAlign.center, style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 8),
           const Text(
             'Create the admin account. The admin can add other profiles on this device, each with its own playlists.',

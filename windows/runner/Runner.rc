@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "dev.tunes404" "\0"
-            VALUE "FileDescription", "tunes404" "\0"
+            VALUE "FileDescription", "404 Tunes" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "tunes404" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 dev.tunes404. All rights reserved." "\0"
             VALUE "OriginalFilename", "tunes404.exe" "\0"
-            VALUE "ProductName", "tunes404" "\0"
+            VALUE "ProductName", "404 Tunes" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

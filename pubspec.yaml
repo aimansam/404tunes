@@ -1,5 +1,5 @@
 name: tunes404
-description: 404tunes - a fully local music player for Android and desktop, powered by yt-dlp.
+description: 404 Tunes - a fully local music player for Android and desktop, powered by yt-dlp.
 publish_to: none
 version: 0.1.0+1
 
@@ -34,6 +34,7 @@ flutter:
   uses-material-design: true
   assets:
     # Each platform bundles only its own yt-dlp + quickjs (Android gets quickjs through jniLibs/).
+    - assets/branding/logo.png
     - path: assets/bin/linux/
       platforms: [linux]
     - path: assets/bin/windows/

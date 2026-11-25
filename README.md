@@ -1,4 +1,4 @@
-# 404tunes
+# 404 Tunes
 
 A music player for **Android and desktop** (Linux, Windows, macOS) that finds and streams songs from YouTube with
 [yt-dlp](https://github.com/yt-dlp/yt-dlp). Everything runs inside the app: **no server**. yt-dlp ships with the app.

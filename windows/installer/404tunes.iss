@@ -9,12 +9,12 @@
 
 [Setup]
 AppId={{6E1F5B0C-4D0A-4C57-9B52-404404404404}
-AppName=404tunes
+AppName=404 Tunes
 AppVersion={#AppVersion}
-AppPublisher=404tunes
+AppPublisher=404 Tunes
 AppPublisherURL=https://github.com/aimansam/404tunes
-DefaultDirName={autopf}\404tunes
-DefaultGroupName=404tunes
+DefaultDirName={autopf}\404 Tunes
+DefaultGroupName=404 Tunes
 DisableProgramGroupPage=yes
 ; Per-user install: no administrator prompt, no UAC.
 PrivilegesRequired=lowest
@@ -37,8 +37,8 @@ Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
 
 [Icons]
-Name: "{group}\404tunes"; Filename: "{app}\tunes404.exe"
-Name: "{autodesktop}\404tunes"; Filename: "{app}\tunes404.exe"; Tasks: desktopicon
+Name: "{group}\404 Tunes"; Filename: "{app}\tunes404.exe"
+Name: "{autodesktop}\404 Tunes"; Filename: "{app}\tunes404.exe"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\tunes404.exe"; Description: "Launch 404tunes"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\tunes404.exe"; Description: "Launch 404 Tunes"; Flags: nowait postinstall skipifsilent
