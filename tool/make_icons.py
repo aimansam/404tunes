@@ -23,12 +23,33 @@ def vgrad(size, top, bot, y0, y1):
     return Image.fromarray(np.ascontiguousarray(img), "RGB").convert("RGBA")
 
 
+ORBS = [  # (x, y, radius, colour, alpha) in the 1024 box
+    (300, 800, 300, (255, 150, 40), 95),
+    (790, 260, 280, (0, 220, 170), 80),
+    (800, 820, 240, (190, 60, 230), 80),
+    (210, 200, 230, (90, 80, 255), 80),
+]
+
+
+def orbs(size):
+    small = size // 6
+    k = small / 1024
+    out = Image.new("RGBA", (small, small), (0, 0, 0, 0))
+    for cx, cy, r, col, al in ORBS:
+        l = Image.new("RGBA", (small, small), col + (0,))     # same colour at alpha 0: no dark fringe when blurred
+        ImageDraw.Draw(l).ellipse([(cx - r) * k, (cy - r) * k, (cx + r) * k, (cy + r) * k], fill=col + (al,))
+        out.alpha_composite(l.filter(ImageFilter.GaussianBlur(r * k * 0.5)))
+    return out.resize((size, size), Image.BICUBIC)
+
+
 def gradient(size):
-    """Deep violet tile, lit from the upper left."""
+    """Deep violet tile, lit from the upper left, with soft colour orbs behind where the glass sits."""
     y, x = np.mgrid[0:size, 0:size].astype(float)
     t = np.clip(np.sqrt((x - size * 0.28) ** 2 + (y - size * 0.18) ** 2) / (size * 1.15), 0, 1)[..., None]
-    a, b = np.array([0x3a, 0x1c, 0x7a], float), np.array([0x0a, 0x06, 0x1c], float)
-    return Image.fromarray((a * (1 - t) + b * t).astype(np.uint8), "RGB").convert("RGBA")
+    a, b = np.array([0x22, 0x10, 0x54], float), np.array([0x07, 0x04, 0x16], float)
+    bg = Image.fromarray((a * (1 - t) + b * t).astype(np.uint8), "RGB").convert("RGBA")
+    bg.alpha_composite(orbs(size))
+    return bg
 
 
 def _mapper(size, scale):
@@ -61,25 +82,42 @@ def note_mask(dx=0, size=S, scale=1.0):
     return m.filter(ImageFilter.GaussianBlur(rad)).point(lambda v: 255 if v >= 128 else 0)
 
 
+def diag(size, hi, lo):
+    """Diagonal alpha ramp: bright (hi) top-left to dim (lo) bottom-right, as an L image."""
+    y, x = np.mgrid[0:size, 0:size].astype(np.float32)
+    t = (x + y) / (2.0 * (size - 1))
+    return Image.fromarray(np.ascontiguousarray((hi + (lo - hi) * t).astype(np.uint8)), "L")
+
+
 def art_layer(size=S, scale=1.0, mono=False):
     layer = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     gx = 14
+    body = note_mask(0, size, scale)
     if mono:
-        layer.paste((255, 255, 255, 255), mask=note_mask(0, size, scale))
+        layer.paste((255, 255, 255, 255), mask=body)
         return layer
-    # soft violet glow behind the note
-    small = size // 8
-    glow = note_mask(0, small, scale).filter(ImageFilter.GaussianBlur(small / 22)).resize((size, size), Image.BICUBIC)
-    layer.paste((150, 90, 255, 80), mask=glow.point(lambda v: v * 80 // 255))
-    shadow = note_mask(0, small, scale)
-    shadow = ImageChops.offset(shadow, 0, small // 60).filter(ImageFilter.GaussianBlur(small / 60)).resize((size, size), Image.BICUBIC)
-    layer.paste((4, 2, 14, 150), mask=shadow.point(lambda v: v * 150 // 255))
     f, P = _mapper(size, scale)
-    ramp = vgrad(size, NOTE_TOP, NOTE_BOT, P(0, 230)[1], P(0, 800)[1])
+    small = size // 8
+    shadow = note_mask(0, small, scale)
+    shadow = ImageChops.offset(shadow, 0, small // 50).filter(ImageFilter.GaussianBlur(small / 45)).resize((size, size), Image.BICUBIC)
+    shadow = ImageChops.subtract(shadow, body.filter(ImageFilter.MaxFilter(3)))   # nothing under the glass itself
+    layer.paste((3, 1, 12, 110), mask=shadow.point(lambda v: v * 110 // 255))
+
     notes = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    notes.paste(AMBER + (255,), mask=note_mask(-gx, size, scale))
-    notes.paste(MINT + (255,), mask=note_mask(gx, size, scale))
-    notes.paste(ramp, mask=note_mask(0, size, scale))
+    # glitch fringes: amber / mint only where they stick out past the glass
+    notes.paste(AMBER + (235,), mask=ImageChops.subtract(note_mask(-gx, size, scale), body))
+    notes.paste(MINT + (235,), mask=ImageChops.subtract(note_mask(gx, size, scale), body))
+    # glass body: translucent white, a little denser at the top
+    fill_a = vgrad(size, (255, 255, 255), (255, 255, 255), 0, 1)  # white
+    ramp = np.clip((np.arange(size) - P(0, 230)[1]) / (P(0, 800)[1] - P(0, 230)[1]), 0, 1)
+    vert = Image.fromarray(np.ascontiguousarray(np.broadcast_to((205 - 95 * ramp)[:, None], (size, size)).astype(np.uint8)), "L")
+    notes.paste(fill_a, mask=ImageChops.multiply(body, vert))
+    # rim light: a thin bright edge, strongest facing the light (top left), faint cool bounce bottom right
+    sigma = 8 * f / 2.05
+    inner = body.filter(ImageFilter.GaussianBlur(sigma)).point(lambda v: 255 if v >= 250 else 0)
+    rim = ImageChops.subtract(body, inner).filter(ImageFilter.GaussianBlur(max(1.0, f * 0.7)))
+    notes.paste((255, 255, 255, 255), mask=ImageChops.multiply(rim, diag(size, 255, 70)))
+    notes.paste((190, 215, 255, 255), mask=ImageChops.multiply(rim, diag(size, 0, 120)))
     # "Signal glitch": one horizontal band of the whole mark is nudged sideways.
     top, bot = int(P(0, 488)[1]), int(P(0, 560)[1])
     band = notes.crop((0, top, size, bot))
@@ -105,6 +143,10 @@ def full_icon(pad=0.0):
     white = Image.new("RGBA", (S, S), (255, 255, 255, 255))
     white.putalpha(sheen.getchannel("A"))
     icon.alpha_composite(white)
+    streak = Image.new("L", (S, S), 0)
+    ImageDraw.Draw(streak).polygon([(0, 0), (S * 0.70, 0), (0, S * 0.70)], fill=255)
+    streak = streak.filter(ImageFilter.GaussianBlur(S / 60)).point(lambda v: v * 22 // 255)
+    icon.paste((255, 255, 255, 255), mask=streak)
     icon.putalpha(rounded(S))
     edge = Image.new("RGBA", (S, S), (0, 0, 0, 0))
     ImageDraw.Draw(edge).rounded_rectangle([0, 0, S - 1, S - 1], radius=S * 230 / 1024, outline=(255, 255, 255, 34), width=S // 340)
@@ -139,13 +181,16 @@ def main():
     open(f"{ROOT}/{res}/mipmap-anydpi-v26/ic_launcher.xml", "w").write(
         '<?xml version="1.0" encoding="utf-8"?>\n'
         '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n'
-        '    <background android:drawable="@color/ic_launcher_background"/>\n'
+        '    <background android:drawable="@mipmap/ic_launcher_background"/>\n'
         '    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>\n'
         '    <monochrome android:drawable="@mipmap/ic_launcher_monochrome"/>\n'
         '</adaptive-icon>\n')
-    open(f"{ROOT}/{res}/values/ic_launcher_background.xml", "w").write(
-        '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n'
-        '    <color name="ic_launcher_background">#170B38</color>\n</resources>\n')
+    bg = gradient(S)
+    for dens, px in (("mdpi", 108), ("hdpi", 162), ("xhdpi", 216), ("xxhdpi", 324), ("xxxhdpi", 432)):
+        save(bg, f"{res}/mipmap-{dens}/ic_launcher_background.png", px)
+    stale = f"{ROOT}/{res}/values/ic_launcher_background.xml"
+    if os.path.exists(stale):
+        os.remove(stale)
 
     # Windows .ico
     ico = icon.resize((256, 256), Image.LANCZOS)
