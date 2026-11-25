@@ -23,11 +23,10 @@ def vgrad(size, top, bot, y0, y1):
     return Image.fromarray(np.ascontiguousarray(img), "RGB").convert("RGBA")
 
 
-ORBS = [  # (x, y, radius, colour, alpha) in the 1024 box
-    (300, 800, 300, (255, 150, 40), 95),
-    (790, 260, 280, (0, 220, 170), 80),
-    (800, 820, 240, (190, 60, 230), 80),
-    (210, 200, 230, (90, 80, 255), 80),
+ORBS = [  # (x, y, radius, colour, alpha) in the 1024 box: faint light pooling at the bottom of a dark tile
+    (260, 900, 320, (255, 120, 60), 60),
+    (820, 900, 300, (120, 70, 255), 75),
+    (780, 160, 260, (0, 200, 170), 30),
 ]
 
 
@@ -46,7 +45,7 @@ def gradient(size):
     """Deep violet tile, lit from the upper left, with soft colour orbs behind where the glass sits."""
     y, x = np.mgrid[0:size, 0:size].astype(float)
     t = np.clip(np.sqrt((x - size * 0.28) ** 2 + (y - size * 0.18) ** 2) / (size * 1.15), 0, 1)[..., None]
-    a, b = np.array([0x22, 0x10, 0x54], float), np.array([0x07, 0x04, 0x16], float)
+    a, b = np.array([0x1d, 0x1b, 0x2a], float), np.array([0x04, 0x04, 0x07], float)
     bg = Image.fromarray((a * (1 - t) + b * t).astype(np.uint8), "RGB").convert("RGBA")
     bg.alpha_composite(orbs(size))
     return bg
@@ -91,7 +90,7 @@ def diag(size, hi, lo):
 
 def art_layer(size=S, scale=1.0, mono=False):
     layer = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    gx = 14
+    gx = 11
     body = note_mask(0, size, scale)
     if mono:
         layer.paste((255, 255, 255, 255), mask=body)
@@ -105,19 +104,26 @@ def art_layer(size=S, scale=1.0, mono=False):
 
     notes = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     # glitch fringes: amber / mint only where they stick out past the glass
-    notes.paste(AMBER + (235,), mask=ImageChops.subtract(note_mask(-gx, size, scale), body))
-    notes.paste(MINT + (235,), mask=ImageChops.subtract(note_mask(gx, size, scale), body))
-    # glass body: translucent white, a little denser at the top
-    fill_a = vgrad(size, (255, 255, 255), (255, 255, 255), 0, 1)  # white
+    notes.paste(AMBER + (205,), mask=ImageChops.subtract(note_mask(-gx, size, scale), body))
+    notes.paste(MINT + (205,), mask=ImageChops.subtract(note_mask(gx, size, scale), body))
+    # smoked glass body: a veil of white that is brightest at the top and fades to nearly clear
     ramp = np.clip((np.arange(size) - P(0, 230)[1]) / (P(0, 800)[1] - P(0, 230)[1]), 0, 1)
-    vert = Image.fromarray(np.ascontiguousarray(np.broadcast_to((205 - 95 * ramp)[:, None], (size, size)).astype(np.uint8)), "L")
-    notes.paste(fill_a, mask=ImageChops.multiply(body, vert))
-    # rim light: a thin bright edge, strongest facing the light (top left), faint cool bounce bottom right
-    sigma = 8 * f / 2.05
+    vert = Image.fromarray(np.ascontiguousarray(np.broadcast_to((92 - 70 * ramp)[:, None], (size, size)).astype(np.uint8)), "L")
+    notes.paste((235, 238, 255, 255), mask=ImageChops.multiply(body, vert))
+    # soft inner glow hugging the edge
+    glow_in = ImageChops.subtract(body, body.filter(ImageFilter.GaussianBlur(16 * f)))
+    notes.paste((255, 255, 255, 255), mask=ImageChops.multiply(glow_in, diag(size, 120, 20)))
+    # diagonal reflection across the glass
+    spec = Image.new("L", (size, size), 0)
+    ImageDraw.Draw(spec).polygon([P(590, 180), P(700, 180), P(420, 820), P(310, 820)], fill=255)
+    spec = ImageChops.multiply(spec.filter(ImageFilter.GaussianBlur(10 * f)).point(lambda v: v * 46 // 255), body)
+    notes.paste((255, 255, 255, 255), mask=spec)
+    # rim light: thin and crisp, strongest toward the light (top left), a faint cool bounce at the bottom right
+    sigma = 6 * f / 2.05
     inner = body.filter(ImageFilter.GaussianBlur(sigma)).point(lambda v: 255 if v >= 250 else 0)
-    rim = ImageChops.subtract(body, inner).filter(ImageFilter.GaussianBlur(max(1.0, f * 0.7)))
-    notes.paste((255, 255, 255, 255), mask=ImageChops.multiply(rim, diag(size, 255, 70)))
-    notes.paste((190, 215, 255, 255), mask=ImageChops.multiply(rim, diag(size, 0, 120)))
+    rim = ImageChops.subtract(body, inner).filter(ImageFilter.GaussianBlur(max(1.0, f * 0.6)))
+    notes.paste((255, 255, 255, 255), mask=ImageChops.multiply(rim, diag(size, 255, 85)))
+    notes.paste((170, 190, 255, 255), mask=ImageChops.multiply(rim, diag(size, 0, 110)))
     # "Signal glitch": one horizontal band of the whole mark is nudged sideways.
     top, bot = int(P(0, 488)[1]), int(P(0, 560)[1])
     band = notes.crop((0, top, size, bot))
@@ -145,11 +151,11 @@ def full_icon(pad=0.0):
     icon.alpha_composite(white)
     streak = Image.new("L", (S, S), 0)
     ImageDraw.Draw(streak).polygon([(0, 0), (S * 0.70, 0), (0, S * 0.70)], fill=255)
-    streak = streak.filter(ImageFilter.GaussianBlur(S / 60)).point(lambda v: v * 22 // 255)
+    streak = streak.filter(ImageFilter.GaussianBlur(S / 60)).point(lambda v: v * 14 // 255)
     icon.paste((255, 255, 255, 255), mask=streak)
     icon.putalpha(rounded(S))
     edge = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-    ImageDraw.Draw(edge).rounded_rectangle([0, 0, S - 1, S - 1], radius=S * 230 / 1024, outline=(255, 255, 255, 34), width=S // 340)
+    ImageDraw.Draw(edge).rounded_rectangle([0, 0, S - 1, S - 1], radius=S * 230 / 1024, outline=(255, 255, 255, 52), width=S // 340)
     icon.alpha_composite(edge)
     if pad:
         inner = int(S * (1 - 2 * pad))
