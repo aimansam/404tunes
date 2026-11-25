@@ -23,32 +23,12 @@ def vgrad(size, top, bot, y0, y1):
     return Image.fromarray(np.ascontiguousarray(img), "RGB").convert("RGBA")
 
 
-ORBS = [  # (x, y, radius, colour, alpha) in the 1024 box: faint light pooling at the bottom of a dark tile
-    (260, 900, 320, (255, 120, 60), 60),
-    (820, 900, 300, (120, 70, 255), 75),
-    (780, 160, 260, (0, 200, 170), 30),
-]
-
-
-def orbs(size):
-    small = size // 6
-    k = small / 1024
-    out = Image.new("RGBA", (small, small), (0, 0, 0, 0))
-    for cx, cy, r, col, al in ORBS:
-        l = Image.new("RGBA", (small, small), col + (0,))     # same colour at alpha 0: no dark fringe when blurred
-        ImageDraw.Draw(l).ellipse([(cx - r) * k, (cy - r) * k, (cx + r) * k, (cy + r) * k], fill=col + (al,))
-        out.alpha_composite(l.filter(ImageFilter.GaussianBlur(r * k * 0.5)))
-    return out.resize((size, size), Image.BICUBIC)
+BG = (0x0c, 0x0b, 0x12)
 
 
 def gradient(size):
-    """Deep violet tile, lit from the upper left, with soft colour orbs behind where the glass sits."""
-    y, x = np.mgrid[0:size, 0:size].astype(float)
-    t = np.clip(np.sqrt((x - size * 0.28) ** 2 + (y - size * 0.18) ** 2) / (size * 1.15), 0, 1)[..., None]
-    a, b = np.array([0x1d, 0x1b, 0x2a], float), np.array([0x04, 0x04, 0x07], float)
-    bg = Image.fromarray((a * (1 - t) + b * t).astype(np.uint8), "RGB").convert("RGBA")
-    bg.alpha_composite(orbs(size))
-    return bg
+    """Flat dark tile (the name is kept from when it was a gradient)."""
+    return Image.new("RGBA", (size, size), BG + (255,))
 
 
 def _mapper(size, scale):
