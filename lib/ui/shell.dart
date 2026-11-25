@@ -8,6 +8,7 @@ import 'playlists_page.dart';
 import 'queue_page.dart';
 import 'search_page.dart';
 import 'settings_page.dart';
+import 'update_ui.dart';
 
 /// Navigation rail + mini player on wide screens (desktop), bottom bar on phones.
 class Shell extends StatefulWidget {
@@ -77,6 +78,7 @@ class _ShellState extends State<Shell> {
                       ])
                     : body,
               ),
+              if (app.updates != null) UpdateBanner(updates: app.updates!),
               MiniPlayer(app: app),
             ]),
           ),

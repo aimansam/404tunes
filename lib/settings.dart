@@ -24,6 +24,12 @@ class AppSettings extends ChangeNotifier {
   String get discordClientId => hasBuiltInDiscordClientId ? builtInDiscordClientId : (_prefs.getString('discordClientId') ?? '').trim();
   bool get hasCustomDiscordClientId => !hasBuiltInDiscordClientId && discordClientId.isNotEmpty;
 
+  /// Look for a new app version at launch and once a day.
+  bool get autoUpdateCheck => _prefs.getBool('autoUpdateCheck') ?? true;
+
+  /// The version whose "update available" banner was closed with "Later".
+  String? get dismissedUpdate => _prefs.getString('dismissedUpdate');
+
   int get cacheMaxBytes => cacheMaxMb * 1024 * 1024;
 
   Future<void> setCacheEnabled(bool v) async {
@@ -49,6 +55,19 @@ class AppSettings extends ChangeNotifier {
       await _prefs.setString('discordClientId', v);
     }
     notifyListeners();
+  }
+
+  Future<void> setAutoUpdateCheck(bool v) async {
+    await _prefs.setBool('autoUpdateCheck', v);
+    notifyListeners();
+  }
+
+  Future<void> setDismissedUpdate(String? version) async {
+    if (version == null) {
+      await _prefs.remove('dismissedUpdate');
+    } else {
+      await _prefs.setString('dismissedUpdate', version);
+    }
   }
 
   Future<void> setCookiesPath(String? v) async {

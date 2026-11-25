@@ -42,3 +42,11 @@ Name: "{autodesktop}\404 Tunes"; Filename: "{app}\tunes404.exe"; Tasks: desktopi
 
 [Run]
 Filename: "{app}\tunes404.exe"; Description: "Launch 404 Tunes"; Flags: nowait postinstall skipifsilent
+; After an in-app update (setup.exe /SILENT /RELAUNCH=1, see lib/update/installer.dart) open the app again.
+Filename: "{app}\tunes404.exe"; Flags: nowait; Check: RelaunchRequested
+
+[Code]
+function RelaunchRequested: Boolean;
+begin
+  Result := WizardSilent and (ExpandConstant('{param:RELAUNCH|0}') = '1');
+end;

@@ -10,6 +10,7 @@ import '../settings.dart';
 import '../data/profiles_repo.dart';
 import '../player/cache_manager.dart';
 import '../presence/presence_service.dart';
+import 'update_ui.dart';
 import 'widgets.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -187,11 +188,12 @@ class _SettingsPageState extends State<SettingsPage> {
           },
         ),
         if (app.presence != null) ..._discordTiles(context),
+        if (app.updates != null) ...[const Divider(), const _Section('Updates'), UpdateSettings(app: app)],
         const Divider(),
         const _Section('YouTube'),
         ListTile(
           title: const Text('yt-dlp'),
-          subtitle: Text(_version ?? 'checking…'),
+          subtitle: Text(_version == null ? 'checking…' : '$_version  ·  updates itself daily'),
           trailing: _updating
               ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
               : OutlinedButton(onPressed: _update, child: const Text('Update')),

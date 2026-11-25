@@ -87,6 +87,9 @@ class PlayerController extends ChangeNotifier {
     _saveTimer = Timer(const Duration(seconds: 1), _flushSave);
   }
 
+  /// Writes the queue out now (the app is about to close).
+  Future<void> saveNow() => _flushSave();
+
   Future<void> _flushSave() async {
     _saveTimer?.cancel();
     final id = _profileId;

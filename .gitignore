@@ -12,3 +12,4 @@ dist/
 .flutter-plugins-dependencies
 .claude/
 CLAUDE.md
+*.pem

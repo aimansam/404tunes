@@ -13,11 +13,12 @@ import 'models.dart';
 /// It is copied to the app-support folder on first run, so `yt-dlp -U` can update it in place.
 /// A bundled quickjs-ng (`qjs`) is the JavaScript runtime yt-dlp can use to solve YouTube's challenges.
 class DesktopBackend implements YtBackend {
-  DesktopBackend({this.exeOverride, this.qjsOverride});
+  DesktopBackend({this.exeOverride, this.qjsOverride, this.stampOverride});
 
   /// Tests / the smoke tool can point at binaries that are already on disk.
   final String? exeOverride;
   final String? qjsOverride;
+  final String? stampOverride;
 
   String? _exe;
   String? _qjs;
@@ -97,6 +98,18 @@ class DesktopBackend implements YtBackend {
       throw YtException('update failed: ${('${r.stderr}').trim()}');
     }
     return version();
+  }
+
+  /// Updates yt-dlp when the last successful update was more than [every] ago. Returns whether it ran.
+  /// A failure (for example offline) is thrown and tried again next time.
+  Future<bool> updateIfDue({Duration every = const Duration(hours: 24)}) async {
+    await init();
+    // Next to the binary; its modification time is when the last update succeeded.
+    final stamp = File(stampOverride ?? p.join(p.dirname(_exe!), '.last-update'));
+    if (await stamp.exists() && DateTime.now().difference(await stamp.lastModified()) < every) return false;
+    await update();
+    await stamp.writeAsString(DateTime.now().toIso8601String());
+    return true;
   }
 
   @override

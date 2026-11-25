@@ -5,6 +5,7 @@ import 'data/profiles_repo.dart';
 import 'player/player_controller.dart';
 import 'presence/presence_service.dart';
 import 'settings.dart';
+import 'update/update_controller.dart';
 import 'yt/yt_service.dart';
 
 enum Stage { loading, setupAdmin, pickProfile, ready }
@@ -18,6 +19,7 @@ class AppState extends ChangeNotifier {
     required this.settings,
     required this.yt,
     this.presence,
+    this.updates,
   });
 
   final ProfilesRepo profiles;
@@ -28,6 +30,9 @@ class AppState extends ChangeNotifier {
 
   /// Discord Rich Presence; only on desktop.
   final PresenceService? presence;
+
+  /// App updates; null in tests.
+  final UpdateController? updates;
 
   Stage stage = Stage.loading;
   Profile? me;

@@ -46,8 +46,11 @@ jobs:
             echo "keyAlias=${KEY_ALIAS:-tunes404}"
           } > android/key.properties
       - run: bash tool/fetch_binaries.sh
+      - name: Version from the tag
+        shell: bash
+        run: bash tool/ci_version.sh >> "$GITHUB_ENV"
       - run: flutter pub get
-      - run: flutter build apk --release --split-per-abi
+      - run: flutter build apk --release --split-per-abi $VERSION_ARGS
       - name: Show signer
         run: |
           BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
@@ -72,8 +75,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev libmpv-dev mpv libasound2-dev libsqlite3-dev
       - run: bash tool/fetch_binaries.sh
+      - name: Version from the tag
+        shell: bash
+        run: bash tool/ci_version.sh >> "$GITHUB_ENV"
       - run: flutter pub get
-      - run: flutter build linux --release --dart-define=DISCORD_CLIENT_ID=${{ vars.DISCORD_CLIENT_ID }}
+      - run: flutter build linux --release --dart-define=DISCORD_CLIENT_ID=${{ vars.DISCORD_CLIENT_ID }} $VERSION_ARGS
       - run: tar -czf 404tunes-linux-x64.tar.gz -C build/linux/x64/release bundle
       - uses: actions/upload-artifact@v4
         with:
@@ -91,8 +97,12 @@ jobs:
           cache: true
       - run: bash tool/fetch_binaries.sh
         shell: bash
+      - name: Version from the tag
+        shell: bash
+        run: bash tool/ci_version.sh >> "$GITHUB_ENV"
       - run: flutter pub get
-      - run: flutter build windows --release --dart-define=DISCORD_CLIENT_ID=${{ vars.DISCORD_CLIENT_ID }}
+      - run: flutter build windows --release --dart-define=DISCORD_CLIENT_ID=${{ vars.DISCORD_CLIENT_ID }} $VERSION_ARGS
+        shell: bash
       - name: Bundle the Visual C++ runtime
         # Without these DLLs next to the exe, a PC that never installed the VC++ redistributable can't start the app.
         shell: pwsh
@@ -129,8 +139,11 @@ jobs:
           channel: stable
           cache: true
       - run: bash tool/fetch_binaries.sh
+      - name: Version from the tag
+        shell: bash
+        run: bash tool/ci_version.sh >> "$GITHUB_ENV"
       - run: flutter pub get
-      - run: flutter build macos --release --dart-define=DISCORD_CLIENT_ID=${{ vars.DISCORD_CLIENT_ID }}
+      - run: flutter build macos --release --dart-define=DISCORD_CLIENT_ID=${{ vars.DISCORD_CLIENT_ID }} $VERSION_ARGS
       - name: Zip
         run: ditto -c -k --sequesterRsrc --keepParent build/macos/Build/Products/Release/tunes404.app 404tunes-macos-arm64.zip
       - uses: actions/upload-artifact@v4
@@ -145,10 +158,15 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           path: dist
           merge-multiple: true
+      - name: Signed update manifest
+        env:
+          UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
+        run: bash tool/sign_update.sh dist "${GITHUB_REF_NAME#v}"
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}

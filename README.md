@@ -41,7 +41,8 @@ Windows will show "Windows protected your PC" because the builds are not code-si
 - **Offline cache** (optional, size limit, least-recently-used cleanup): cached songs play without internet
 - **Android**: media notification, lock-screen and headset controls, background playback
 - **Discord Rich Presence** on desktop (off by default): "Listening to 404 Tunes" with the song, artist, cover and a progress bar
-- **Stays working**: yt-dlp updates itself (Android: daily in the background; desktop: Settings → Update), and an optional `cookies.txt` handles YouTube's "confirm you're not a bot"
+- **Updates itself**: Windows (installer version) and Android download and install new releases from inside the app; macOS, Linux and the portable Windows zip tell you when one is out
+- **Stays working**: yt-dlp updates itself daily, and an optional `cookies.txt` handles YouTube's "confirm you're not a bot"
 - **Desktop shortcuts**: `Space` play/pause (not while typing), `Ctrl+←` / `Ctrl+→` previous / next
 
 <div align="center">
@@ -68,6 +69,20 @@ Windows will show "Windows protected your PC" because the builds are not code-si
 3. **Settings → Manage profiles** (admin) to add people. Each profile signs in with its own PIN.
 4. **Settings → Offline cache** to keep played songs on the device.
 5. If YouTube says "Sign in to confirm you're not a bot": export your browser's YouTube cookies as a Netscape `cookies.txt` and choose it under **Settings → Cookies file**.
+
+### Updates
+
+The app asks GitHub for the latest release at launch and once a day (turn that off under **Settings → Updates**, where you can also check by hand).
+
+| Where | What happens when you choose **Update** |
+| --- | --- |
+| Windows, installed with the setup | Downloads the new installer, closes, installs it silently and opens again |
+| Android | Downloads the APK for your phone; Android asks you to confirm. The first time you also allow 404 Tunes to install apps |
+| macOS, Linux, portable Windows zip | Opens the release page |
+
+Nothing is installed unless it is verified: each release carries `update.json` (size and SHA-256 of every file), signed with an Ed25519 key whose public half is built into the app.
+Android additionally refuses an APK that is not signed with the same key as the installed app.
+Versions up to 0.2.5 have no updater, so install a newer one by hand once.
 
 ### Discord Rich Presence (desktop)
 
@@ -140,9 +155,23 @@ keytool -genkeypair -keystore android/my-release.jks -storetype PKCS12 -alias my
 
 Keep the keystore and its password backed up: an app can only be updated in place by APKs signed with the same key.
 
+### Update signing
+
+The release workflow signs `update.json` with the secret `UPDATE_SIGNING_KEY`, which must match `lib/update/update_key.dart` (the build refuses to publish otherwise).
+To set up your own (for a fork, say):
+
+```bash
+openssl genpkey -algorithm ed25519 -out update-signing-key.pem       # keep this safe and out of git
+openssl pkey -in update-signing-key.pem -pubout -outform DER | tail -c 32 | base64   # put this in lib/update/update_key.dart
+gh secret set UPDATE_SIGNING_KEY < update-signing-key.pem
+```
+
+Also set the repository name in `lib/update/updater.dart`. If the key is lost, installed apps can't verify newer releases: people have to update once by hand.
+
 ### Releases (GitHub Actions)
 
-`.github/workflows/release.yml` builds Android, Linux, Windows (installer + portable zip) and macOS (Apple silicon) and attaches them to a release when you push a version tag:
+`.github/workflows/release.yml` builds Android, Linux, Windows (installer + portable zip) and macOS (Apple silicon) and attaches them to a release when you push a version tag.
+The tag (`vMAJOR.MINOR.PATCH`) becomes the app's version:
 
 ```bash
 git tag v0.3.0 && git push origin v0.3.0

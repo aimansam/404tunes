@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -17,6 +18,11 @@ import 'player/player_controller.dart';
 import 'presence/discord_rpc.dart';
 import 'presence/presence_service.dart';
 import 'settings.dart';
+import 'update/installer.dart';
+import 'update/installer_android.dart';
+import 'update/update_controller.dart';
+import 'update/updater.dart';
+import 'update/version.dart';
 import 'yt/backend.dart';
 import 'yt/backend_android.dart';
 import 'yt/backend_desktop.dart';
@@ -59,6 +65,25 @@ Future<void> main() async {
     });
   }
 
+  // App updates from GitHub releases. Only builds made from a release tag know their version and look for updates.
+  final updates = UpdateController(
+    updater: Updater(currentVersion: Version.tryParse(const String.fromEnvironment('APP_VERSION'))),
+    installer: Platform.isAndroid
+        ? AndroidInstaller()
+        : DesktopInstaller(
+            operatingSystem: Platform.operatingSystem,
+            executable: Platform.resolvedExecutable,
+            quit: () async {
+              await player.pause();
+              await player.saveNow();
+              exit(0);
+            },
+          ),
+    settings: settings,
+    // Android: must be <cache>/updates, the folder MainActivity and update_paths.xml allow.
+    downloadDir: () async => Directory(p.join((await getTemporaryDirectory()).path, Platform.isAndroid ? 'updates' : '404tunes-update')),
+  );
+
   final app = AppState(
     profiles: ProfilesRepo(db),
     playlists: PlaylistsRepo(db),
@@ -66,6 +91,7 @@ Future<void> main() async {
     settings: settings,
     yt: yt,
     presence: presence,
+    updates: updates,
   );
 
   if (systemMediaControlsSupported) await initAudioService(player);
@@ -73,6 +99,15 @@ Future<void> main() async {
   runApp(TunesApp(app: app, cache: cache));
   await app.start();
 
+  updates.start();
+
   // Get yt-dlp ready in the background so the first search is fast.
-  backend.init().catchError((_) {});
+  await backend.init().catchError((_) {});
+
+  // Desktop: keep yt-dlp current (Android does this in YtDlpPlugin). Not right away, so the first search isn't held up.
+  if (backend is DesktopBackend) {
+    void refresh() => backend.updateIfDue().catchError((_) => false);
+    Timer(const Duration(seconds: 30), refresh);
+    Timer.periodic(const Duration(hours: 6), (_) => refresh());
+  }
 }

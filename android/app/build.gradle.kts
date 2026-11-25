@@ -75,6 +75,8 @@ dependencies {
     // yt-dlp + Python for Android, and ffmpeg
     implementation("io.github.junkfood02.youtubedl-android:library:0.18.1")
     implementation("io.github.junkfood02.youtubedl-android:ffmpeg:0.18.1")
+    // FileProvider, to hand a downloaded update to the system installer
+    implementation("androidx.core:core:1.13.1")
 }
 
 flutter {
