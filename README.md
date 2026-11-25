@@ -95,9 +95,9 @@ It shows while a song plays and disappears on pause or stop. It needs an applica
 
 1. Create an application at <https://discord.com/developers/applications> named **404 Tunes** (you can upload the logo from `assets/branding/logo.png`).
 2. Copy its **Application ID** (not a secret).
-3. Either type it into **Settings → Discord → Discord application ID**, or bake it into your builds so users only flip the switch:
+3. Bake it into your builds so users only flip the switch (the ID field is hidden in those builds), or, in a build without one, type it into **Settings → Discord → Discord application ID**:
    ```bash
-   gh variable set DISCORD_CLIENT_ID --body 123456789012345678     # the release workflow passes it as --dart-define
+   gh api -X POST repos/OWNER/REPO/actions/variables -f name=DISCORD_CLIENT_ID -f value=123456789012345678   # or: Settings → Secrets and variables → Actions → Variables; the release workflow passes it as --dart-define
    flutter run -d linux --dart-define=DISCORD_CLIENT_ID=123456789012345678   # local builds
    ```
 4. Turn on **Settings → Discord → Show what I'm playing**.

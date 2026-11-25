@@ -17,13 +17,12 @@ class AppSettings extends ChangeNotifier {
   /// Discord Rich Presence (desktop). Off unless the user turns it on.
   bool get discordEnabled => _prefs.getBool('discordEnabled') ?? false;
 
-  /// Application ID from discord.com/developers. A release build can ship one (--dart-define=DISCORD_CLIENT_ID=...);
-  /// an ID typed into Settings overrides it.
+  /// Application ID from discord.com/developers. A release build ships one (--dart-define=DISCORD_CLIENT_ID=...);
+  /// when it does, that is the one used and Settings does not ask. Builds without one let the user type their own.
   static const builtInDiscordClientId = String.fromEnvironment('DISCORD_CLIENT_ID');
-  String get discordClientId => (_prefs.getString('discordClientId') ?? '').trim().isNotEmpty
-      ? _prefs.getString('discordClientId')!.trim()
-      : builtInDiscordClientId;
-  bool get hasCustomDiscordClientId => (_prefs.getString('discordClientId') ?? '').trim().isNotEmpty;
+  static bool get hasBuiltInDiscordClientId => builtInDiscordClientId.isNotEmpty;
+  String get discordClientId => hasBuiltInDiscordClientId ? builtInDiscordClientId : (_prefs.getString('discordClientId') ?? '').trim();
+  bool get hasCustomDiscordClientId => !hasBuiltInDiscordClientId && discordClientId.isNotEmpty;
 
   int get cacheMaxBytes => cacheMaxMb * 1024 * 1024;
 

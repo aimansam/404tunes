@@ -87,7 +87,7 @@ class _SettingsPageState extends State<SettingsPage> {
             keyboardType: TextInputType.number,
             decoration: InputDecoration(
               border: const OutlineInputBorder(),
-              hintText: AppSettings.builtInDiscordClientId.isEmpty ? 'Application ID' : 'Leave empty to use the built-in one',
+              hintText: 'Application ID',
             ),
             onSubmitted: (_) => Navigator.pop(ctx, c.text),
           ),
@@ -108,35 +108,28 @@ class _SettingsPageState extends State<SettingsPage> {
     return [
       const Divider(),
       const _Section('Discord'),
-      SwitchListTile(
-        title: const Text('Show what I\'m playing on Discord'),
-        subtitle: Text(hasId
-            ? 'Shows "Listening to 404 Tunes" with the song while it plays. Needs the Discord desktop app open.'
-            : 'Add a Discord application ID first.'),
-        value: s.discordEnabled && hasId,
-        onChanged: hasId ? s.setDiscordEnabled : null,
-      ),
       ValueListenableBuilder<PresenceStatus>(
         valueListenable: presence.status,
-        builder: (context, st, _) => ListTile(
-          title: const Text('Discord application ID'),
-          subtitle: Text([
-            if (!hasId)
-              'Not set'
-            else if (s.hasCustomDiscordClientId)
-              s.discordClientId
-            else
-              'Built in',
-            if (s.discordEnabled && hasId)
-              switch (st) {
-                PresenceStatus.showing => 'Showing on Discord',
-                PresenceStatus.unavailable => 'Discord not reachable: is the desktop app open?',
-                _ => 'Ready',
-              },
-          ].join('  ·  ')),
-          trailing: OutlinedButton(onPressed: _editDiscordId, child: Text(hasId ? 'Change' : 'Set')),
+        builder: (context, st, _) => SwitchListTile(
+          title: const Text('Show what I\'m playing on Discord'),
+          subtitle: Text(!hasId
+              ? 'Add a Discord application ID first.'
+              : s.discordEnabled && st == PresenceStatus.showing
+                  ? 'Showing on Discord'
+                  : s.discordEnabled && st == PresenceStatus.unavailable
+                      ? 'Discord not reachable: is the desktop app open?'
+                      : 'Shows "Listening to 404 Tunes" with the song while it plays. Needs the Discord desktop app open.'),
+          value: s.discordEnabled && hasId,
+          onChanged: hasId ? s.setDiscordEnabled : null,
         ),
       ),
+      // Builds that ship an application ID don't ask for one.
+      if (!AppSettings.hasBuiltInDiscordClientId)
+        ListTile(
+          title: const Text('Discord application ID'),
+          subtitle: Text(hasId ? s.discordClientId : 'Not set'),
+          trailing: OutlinedButton(onPressed: _editDiscordId, child: Text(hasId ? 'Change' : 'Set')),
+        ),
     ];
   }
 
