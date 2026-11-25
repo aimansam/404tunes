@@ -27,8 +27,13 @@ BG = (0x0c, 0x0b, 0x12)
 
 
 def gradient(size):
-    """Flat dark tile (the name is kept from when it was a gradient)."""
-    return Image.new("RGBA", (size, size), BG + (255,))
+    """Flat dark tile with a fine frosted-glass grain (the name is kept from when it was a gradient)."""
+    base = np.full((size, size, 3), BG, np.float32)
+    small = size // 6
+    noise = np.random.default_rng(404).normal(0, 1, (small, small)).astype(np.float32)
+    grain = Image.fromarray(np.clip(128 + noise * 40, 0, 255).astype(np.uint8), "L").resize((size, size), Image.BICUBIC)
+    g = (np.asarray(grain, np.float32) - 128) / 40 * 3.2          # about +-3 levels
+    return Image.fromarray(np.clip(base + g[..., None], 0, 255).astype(np.uint8), "RGB").convert("RGBA")
 
 
 def _mapper(size, scale):
@@ -118,9 +123,17 @@ def full_icon(pad=0.0):
     """Rounded-square icon on transparent; pad = fraction of the canvas left empty on each side."""
     icon = gradient(S)
     icon.alpha_composite(art_layer())
-    icon.putalpha(rounded(S))
+    tile = rounded(S)
+    icon.putalpha(tile)
+    # frosted-glass edge: a soft glow just inside the border, plus a double rim that suggests thickness
+    glow = ImageChops.subtract(tile, tile.filter(ImageFilter.GaussianBlur(S / 38)))
+    icon.paste((255, 255, 255, 255), mask=ImageChops.multiply(glow, diag(S, 120, 50)).point(lambda v: v * 70 // 255))
     edge = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-    ImageDraw.Draw(edge).rounded_rectangle([0, 0, S - 1, S - 1], radius=S * 230 / 1024, outline=(255, 255, 255, 52), width=S // 340)
+    ed = ImageDraw.Draw(edge)
+    r = S * 230 / 1024
+    ed.rounded_rectangle([0, 0, S - 1, S - 1], radius=r, outline=(255, 255, 255, 70), width=S // 300)
+    m = S // 60
+    ed.rounded_rectangle([m, m, S - 1 - m, S - 1 - m], radius=r - m, outline=(255, 255, 255, 20), width=max(2, S // 700))
     icon.alpha_composite(edge)
     if pad:
         inner = int(S * (1 - 2 * pad))
