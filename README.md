@@ -9,6 +9,7 @@ A music player for **Android and desktop** (Linux, Windows, macOS) that finds an
 - Android: media notification, lock-screen and headset controls, background playback
 - Optional offline cache (size limit, least-recently-used cleanup): cached songs play without internet
 - yt-dlp updates itself (Android: daily in the background; desktop: Settings → Update), optional `cookies.txt` for when YouTube asks "confirm you're not a bot"
+- Discord Rich Presence on desktop (off by default): "Listening to 404 Tunes" with the song, artist, cover and a progress bar
 - Desktop shortcuts: `Space` play/pause (not while typing), `Ctrl+←` / `Ctrl+→` previous / next
 
 > **YouTube's terms:** playing YouTube audio outside YouTube's own player goes against its terms of service. This is a personal-use
@@ -87,6 +88,23 @@ On Windows the release has an installer (`404tunes-windows-x64-setup.exe`: per-u
 "Run workflow" on the Actions tab builds everything for testing and keeps the files as artifacts without making a release.
 The Windows and macOS builds are unsigned: Windows SmartScreen and macOS Gatekeeper will warn on first launch (macOS: right-click → Open).
 
+### Discord Rich Presence (desktop)
+
+The app talks to the **Discord desktop app** over its local socket (unix socket on Linux/macOS, named pipe on Windows): no server, no login.
+It shows while a song plays and disappears on pause or stop. It needs an application on Discord's side, which gives the name shown on your profile:
+
+1. Create an application at <https://discord.com/developers/applications> named **404 Tunes** (you can upload the logo from `assets/branding/logo.png`).
+2. Copy its **Application ID** (not a secret).
+3. Either type it into **Settings → Discord → Discord application ID**, or bake it into your builds so users only flip the switch:
+   ```bash
+   gh variable set DISCORD_CLIENT_ID --body 123456789012345678     # the release workflow passes it as --dart-define
+   flutter run -d linux --dart-define=DISCORD_CLIENT_ID=123456789012345678   # local builds
+   ```
+4. Turn on **Settings → Discord → Show what I'm playing**.
+
+It only works while the Discord desktop app runs on the same machine (the Flatpak and Snap versions are found too). Android can't do this: the Discord mobile app has no local
+socket for other apps. The status shows the song title to your Discord friends, which is why it is off by default.
+
 ## Tests
 
 ```bash
@@ -113,3 +131,4 @@ The yt-dlp behaviour (search filters, flat playlist expansion, link expiry and `
 - No iOS: iOS apps can't run yt-dlp.
 - Live streams can't be played.
 - The Android APK builds and its contents are verified, but it has not been run on a phone or emulator (no emulator was available in development). The desktop (Linux) build was run and tested end to end.
+- Discord Rich Presence was tested on Linux against a stand-in for Discord (real socket, real app) but not against a real Discord client; the Windows named-pipe path is untested.

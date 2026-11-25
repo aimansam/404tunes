@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'data/playlists_repo.dart';
 import 'data/profiles_repo.dart';
 import 'player/player_controller.dart';
+import 'presence/presence_service.dart';
 import 'settings.dart';
 import 'yt/yt_service.dart';
 
@@ -16,6 +17,7 @@ class AppState extends ChangeNotifier {
     required this.player,
     required this.settings,
     required this.yt,
+    this.presence,
   });
 
   final ProfilesRepo profiles;
@@ -23,6 +25,9 @@ class AppState extends ChangeNotifier {
   final PlayerController player;
   final AppSettings settings;
   final YtService yt;
+
+  /// Discord Rich Presence; only on desktop.
+  final PresenceService? presence;
 
   Stage stage = Stage.loading;
   Profile? me;

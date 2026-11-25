@@ -14,6 +14,8 @@ import 'data/profiles_repo.dart';
 import 'player/audio_handler.dart';
 import 'player/cache_manager.dart';
 import 'player/player_controller.dart';
+import 'presence/discord_rpc.dart';
+import 'presence/presence_service.dart';
 import 'settings.dart';
 import 'yt/backend.dart';
 import 'yt/backend_android.dart';
@@ -37,12 +39,33 @@ Future<void> main() async {
   final cache = CacheManager(cacheDir, yt);
 
   final player = PlayerController(yt: yt, cache: cache, settings: settings, kv: KvRepo(db));
+  // Discord Rich Presence: only on desktop, where the Discord app listens on a local socket.
+  PresenceService? presence;
+  if (Platform.isLinux || Platform.isWindows || Platform.isMacOS) {
+    final rpc = DiscordRpc(clientId: settings.discordClientId);
+    presence = PresenceService(
+      sink: rpc,
+      enabled: () => settings.discordEnabled && settings.discordClientId.isNotEmpty,
+      read: () {
+        final t = player.current;
+        if (t == null) return null;
+        return NowPlaying(t, playing: player.playing && !player.loading, position: player.player.position);
+      },
+    );
+    player.addListener(presence.poke);
+    settings.addListener(() {
+      rpc.clientId = settings.discordClientId;
+      presence!.poke();
+    });
+  }
+
   final app = AppState(
     profiles: ProfilesRepo(db),
     playlists: PlaylistsRepo(db),
     player: player,
     settings: settings,
     yt: yt,
+    presence: presence,
   );
 
   if (systemMediaControlsSupported) await initAudioService(player);

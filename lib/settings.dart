@@ -14,6 +14,17 @@ class AppSettings extends ChangeNotifier {
   String? get cookiesPath => _prefs.getString('cookiesPath');
   int? get lastProfileId => _prefs.getInt('lastProfileId');
 
+  /// Discord Rich Presence (desktop). Off unless the user turns it on.
+  bool get discordEnabled => _prefs.getBool('discordEnabled') ?? false;
+
+  /// Application ID from discord.com/developers. A release build can ship one (--dart-define=DISCORD_CLIENT_ID=...);
+  /// an ID typed into Settings overrides it.
+  static const builtInDiscordClientId = String.fromEnvironment('DISCORD_CLIENT_ID');
+  String get discordClientId => (_prefs.getString('discordClientId') ?? '').trim().isNotEmpty
+      ? _prefs.getString('discordClientId')!.trim()
+      : builtInDiscordClientId;
+  bool get hasCustomDiscordClientId => (_prefs.getString('discordClientId') ?? '').trim().isNotEmpty;
+
   int get cacheMaxBytes => cacheMaxMb * 1024 * 1024;
 
   Future<void> setCacheEnabled(bool v) async {
@@ -23,6 +34,21 @@ class AppSettings extends ChangeNotifier {
 
   Future<void> setCacheMaxMb(int v) async {
     await _prefs.setInt('cacheMaxMb', v);
+    notifyListeners();
+  }
+
+  Future<void> setDiscordEnabled(bool v) async {
+    await _prefs.setBool('discordEnabled', v);
+    notifyListeners();
+  }
+
+  Future<void> setDiscordClientId(String? v) async {
+    v = v?.trim();
+    if (v == null || v.isEmpty) {
+      await _prefs.remove('discordClientId');
+    } else {
+      await _prefs.setString('discordClientId', v);
+    }
     notifyListeners();
   }
 

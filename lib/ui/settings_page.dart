@@ -6,8 +6,10 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../app_state.dart';
+import '../settings.dart';
 import '../data/profiles_repo.dart';
 import '../player/cache_manager.dart';
+import '../presence/presence_service.dart';
 import 'widgets.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -65,6 +67,79 @@ class _SettingsPageState extends State<SettingsPage> {
     if (mounted) setState(() {});
   }
 
+  Future<void> _editDiscordId() async {
+    final s = app.settings;
+    final c = TextEditingController(text: s.hasCustomDiscordClientId ? s.discordClientId : '');
+    final v = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Discord application ID'),
+        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text(
+            'Create an application at discord.com/developers/applications and copy its Application ID. '
+            'The application\'s name is what Discord shows: "Listening to 404 Tunes".',
+            style: TextStyle(fontSize: 12),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: c,
+            autofocus: true,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              border: const OutlineInputBorder(),
+              hintText: AppSettings.builtInDiscordClientId.isEmpty ? 'Application ID' : 'Leave empty to use the built-in one',
+            ),
+            onSubmitted: (_) => Navigator.pop(ctx, c.text),
+          ),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, c.text), child: const Text('Save')),
+        ],
+      ),
+    );
+    if (v != null) await s.setDiscordClientId(v);
+  }
+
+  List<Widget> _discordTiles(BuildContext context) {
+    final s = app.settings;
+    final presence = app.presence!;
+    final hasId = s.discordClientId.isNotEmpty;
+    return [
+      const Divider(),
+      const _Section('Discord'),
+      SwitchListTile(
+        title: const Text('Show what I\'m playing on Discord'),
+        subtitle: Text(hasId
+            ? 'Shows "Listening to 404 Tunes" with the song while it plays. Needs the Discord desktop app open.'
+            : 'Add a Discord application ID first.'),
+        value: s.discordEnabled && hasId,
+        onChanged: hasId ? s.setDiscordEnabled : null,
+      ),
+      ValueListenableBuilder<PresenceStatus>(
+        valueListenable: presence.status,
+        builder: (context, st, _) => ListTile(
+          title: const Text('Discord application ID'),
+          subtitle: Text([
+            if (!hasId)
+              'Not set'
+            else if (s.hasCustomDiscordClientId)
+              s.discordClientId
+            else
+              'Built in',
+            if (s.discordEnabled && hasId)
+              switch (st) {
+                PresenceStatus.showing => 'Showing on Discord',
+                PresenceStatus.unavailable => 'Discord not reachable: is the desktop app open?',
+                _ => 'Ready',
+              },
+          ].join('  ·  ')),
+          trailing: OutlinedButton(onPressed: _editDiscordId, child: Text(hasId ? 'Change' : 'Set')),
+        ),
+      ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = app.settings;
@@ -118,6 +193,7 @@ class _SettingsPageState extends State<SettingsPage> {
             _refreshCache();
           },
         ),
+        if (app.presence != null) ..._discordTiles(context),
         const Divider(),
         const _Section('YouTube'),
         ListTile(
