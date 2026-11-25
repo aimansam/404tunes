@@ -39,6 +39,7 @@ void main() {
       expect(ts['start'], 1700000000 - 20);
       expect(ts['end'], 1700000000 - 20 + 337);
       expect((a['assets'] as Map)['large_image'], 'https://i.ytimg.com/vi/abcdefghijk/mqdefault.jpg');
+      expect((a['assets'] as Map).containsKey('large_text'), isFalse); // would show the title a second time
     });
 
     test('no end time without a duration, no state without a channel', () {

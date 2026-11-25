@@ -47,7 +47,7 @@ Map<String, Object?> buildActivity(NowPlaying np, {DateTime? now}) {
       'start': startMs ~/ 1000,
       if (t.duration != null && t.duration! > 0) 'end': startMs ~/ 1000 + t.duration!,
     },
-    'assets': {'large_image': t.thumbUrl, 'large_text': _clip(t.title)},
+    'assets': {'large_image': t.thumbUrl},
   };
 }
 
