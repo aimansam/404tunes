@@ -5,7 +5,7 @@ import 'models.dart';
 /// Implementations: `DesktopYt` (bundled yt-dlp binary via Process) and `AndroidYt`
 /// (youtubedl-android over a MethodChannel). Tests use a fake.
 ///
-/// Behaviour ported from shinsoku's api/server.py:
+/// Behaviour:
 ///  - search: `ytsearch20:<q>`, drop live / upcoming / no-duration entries
 ///  - searchPlaylists: results page with the `sp=EgIQAw%3D%3D` filter
 ///  - playlist: flat extraction, drop private / deleted / live entries

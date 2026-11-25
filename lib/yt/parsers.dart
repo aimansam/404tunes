@@ -1,7 +1,6 @@
 import 'models.dart';
 
 /// Pure functions that turn yt-dlp `-J` output into app models.
-/// Ported from shinsoku's api/server.py (search / playlist / resolve).
 
 final _videoId = RegExp(r'^[\w-]{11}$');
 final _listId = RegExp(r'^[\w-]{10,64}$');

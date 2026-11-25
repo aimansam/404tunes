@@ -168,11 +168,6 @@ flutter test                                  # parsers (real yt-dlp output fixt
 SMOKE=1 flutter test test/smoke_test.dart     # the same code against real YouTube (needs internet and the fetched binaries)
 ```
 
-## Ideas borrowed from shinsoku
-
-The yt-dlp behaviour (search filters, flat playlist expansion, link expiry and `available_at` handling, warming the next song, thumbnails straight from
-`i.ytimg.com`, cookies, daily updates) was ported from shinsoku's `api/server.py` to Dart.
-
 ## Limits
 
 - No iOS: iOS apps can't run yt-dlp.
