@@ -83,6 +83,7 @@ gh secret set ANDROID_KEYSTORE_PASSWORD        # the password in android/key.pro
 gh secret set ANDROID_KEY_ALIAS --body tunes404
 ```
 
+On Windows the release has an installer (`404tunes-windows-x64-setup.exe`: per-user, no admin rights, Start menu entry, uninstaller, Visual C++ runtime included) and a portable zip.
 "Run workflow" on the Actions tab builds everything for testing and keeps the files as artifacts without making a release.
 The Windows and macOS builds are unsigned: Windows SmartScreen and macOS Gatekeeper will warn on first launch (macOS: right-click → Open).
 

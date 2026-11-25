@@ -93,13 +93,31 @@ jobs:
         shell: bash
       - run: flutter pub get
       - run: flutter build windows --release
-      - name: Zip
+      - name: Bundle the Visual C++ runtime
+        # Without these DLLs next to the exe, a PC that never installed the VC++ redistributable can't start the app.
+        shell: pwsh
+        run: |
+          foreach ($d in 'msvcp140.dll','vcruntime140.dll','vcruntime140_1.dll') {
+            Copy-Item "$env:SystemRoot\System32\$d" build/windows/x64/runner/Release/
+          }
+      - name: Zip (portable)
         shell: pwsh
         run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath 404tunes-windows-x64.zip
+      - name: Installer
+        shell: pwsh
+        run: |
+          $v = if ($env:GITHUB_REF_TYPE -eq 'tag') { $env:GITHUB_REF_NAME.TrimStart('v') } else { '0.0.0' }
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress; }
+          & $iscc "/DAppVersion=$v" "/DSourceDir=$PWD\build\windows\x64\runner\Release" windows\installer\404tunes.iss
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed" }
+          Move-Item dist/404tunes-windows-x64-setup.exe .
       - uses: actions/upload-artifact@v4
         with:
           name: windows
-          path: 404tunes-windows-x64.zip
+          path: |
+            404tunes-windows-x64.zip
+            404tunes-windows-x64-setup.exe
 
   macos:
     runs-on: macos-latest # Apple silicon: matches the arm64 quickjs that tool/fetch_binaries.sh bundles
