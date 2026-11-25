@@ -69,8 +69,14 @@ class YtDlpService implements YtService {
     final key = q.toLowerCase();
     final cached = _hit(_search, key);
     if (cached != null) return cached;
-    final json = await _json(['--flat-playlist', 'ytsearch20:$q']);
-    final out = parseSearch(json);
+    var out = parseSearch(await _json(['--flat-playlist', 'ytsearch20:$q']));
+    // YouTube now and then answers a whole search without channel names. Ask once more rather than show blank artists.
+    if (out.length >= 4 && out.where((t) => t.channel.isEmpty).length * 2 > out.length) {
+      try {
+        final again = parseSearch(await _json(['--flat-playlist', 'ytsearch20:$q']));
+        if (again.where((t) => t.channel.isEmpty).length < out.where((t) => t.channel.isEmpty).length) out = again;
+      } catch (_) {}
+    }
     _search[key] = _Cached(out, _now().add(_searchTtl));
     return out;
   }

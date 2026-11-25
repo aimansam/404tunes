@@ -1,21 +1,91 @@
+<div align="center">
+
+<img src="assets/branding/logo.png" width="128" alt="404 Tunes logo">
+
 # 404 Tunes
 
-A music player for **Android and desktop** (Linux, Windows, macOS) that finds and streams songs from YouTube with
-[yt-dlp](https://github.com/yt-dlp/yt-dlp). Everything runs inside the app: **no server**. yt-dlp ships with the app.
+**A music player for Android and desktop that streams from YouTube with yt-dlp.**<br>
+Everything runs inside the app. No server, no account, no ads.
 
-- Search songs and playlists, play, seek, shuffle, repeat, queue (reorder, play next, add)
-- Playlists, per profile (save a YouTube playlist, or build your own from search)
-- Local profiles: the first launch creates the **admin**; the admin adds other profiles, each with its own PIN, playlists and saved queue
-- Android: media notification, lock-screen and headset controls, background playback
-- Optional offline cache (size limit, least-recently-used cleanup): cached songs play without internet
-- yt-dlp updates itself (Android: daily in the background; desktop: Settings → Update), optional `cookies.txt` for when YouTube asks "confirm you're not a bot"
-- Discord Rich Presence on desktop (off by default): "Listening to 404 Tunes" with the song, artist, cover and a progress bar
-- Desktop shortcuts: `Space` play/pause (not while typing), `Ctrl+←` / `Ctrl+→` previous / next
+[![Release](https://img.shields.io/github/v/release/aimansam/404tunes?style=flat-square&color=8a7bff)](https://github.com/aimansam/404tunes/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/aimansam/404tunes/total?style=flat-square&color=8a7bff)](https://github.com/aimansam/404tunes/releases)
+[![CI](https://img.shields.io/github/actions/workflow/status/aimansam/404tunes/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/aimansam/404tunes/actions/workflows/ci.yml)
+![Platforms](https://img.shields.io/badge/platforms-Android%20%7C%20Windows%20%7C%20macOS%20%7C%20Linux-333?style=flat-square)
+![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?style=flat-square&logo=flutter&logoColor=white)
+
+<br>
+
+<img src="docs/demo.gif" width="760" alt="Demo: search a song, play it, open Now Playing, the queue and a playlist">
+
+</div>
+
+## Download
+
+Grab the latest build from the **[Releases page](https://github.com/aimansam/404tunes/releases/latest)**.
+
+| Platform | File | Notes |
+| --- | --- | --- |
+| **Windows** | `404tunes-windows-x64-setup.exe` | Installer for the current user: no admin rights, Start menu entry, uninstaller. A portable `.zip` is also there. |
+| **Android** | `app-arm64-v8a-release.apk` | For almost every phone made since 2017. `armeabi-v7a` is for old 32-bit phones, `x86_64` for emulators. Sideload it (Google Play does not allow this kind of app). |
+| **macOS** | `404tunes-macos-arm64.zip` | Apple silicon. The app is unsigned: right-click it and choose **Open** the first time. |
+| **Linux** | `404tunes-linux-x64.tar.gz` | Needs `libmpv` (`sudo apt install libmpv2`). Unpack and run `bundle/tunes404`. |
+
+Windows will show "Windows protected your PC" because the builds are not code-signed: choose **More info → Run anyway**.
+
+## Features
+
+- **Search** songs and playlists, then play, seek, shuffle and repeat
+- **Queue** you can reorder, with *play next* and *add to queue*; it is saved and restored
+- **Playlists** per profile: build your own from search, or save a YouTube playlist
+- **Profiles** on one device: the first launch creates the **admin**, who adds other people, each with their own PIN, playlists and queue
+- **Offline cache** (optional, size limit, least-recently-used cleanup): cached songs play without internet
+- **Android**: media notification, lock-screen and headset controls, background playback
+- **Discord Rich Presence** on desktop (off by default): "Listening to 404 Tunes" with the song, artist, cover and a progress bar
+- **Stays working**: yt-dlp updates itself (Android: daily in the background; desktop: Settings → Update), and an optional `cookies.txt` handles YouTube's "confirm you're not a bot"
+- **Desktop shortcuts**: `Space` play/pause (not while typing), `Ctrl+←` / `Ctrl+→` previous / next
+
+<div align="center">
+
+| Search | Now playing |
+| :---: | :---: |
+| <img src="docs/search.png" width="440" alt="Search results"> | <img src="docs/now-playing.png" width="440" alt="Now playing"> |
+| **Queue** | **Playlist** |
+| <img src="docs/queue.png" width="440" alt="Queue"> | <img src="docs/playlist.png" width="440" alt="A playlist"> |
+
+<img src="docs/phone.png" width="520" alt="The phone layout: search and now playing">
+
+</div>
 
 > **YouTube's terms:** playing YouTube audio outside YouTube's own player goes against its terms of service. This is a personal-use
-> tool; it can't be published on Google Play for that reason, so Android is a sideloaded APK.
+> tool, and it can't be published on Google Play for that reason, so Android is a sideloaded APK.
 >
 > **Profiles are a lock, not encryption.** They keep people's playlists apart on one device. The database file is not encrypted.
+
+## Using it
+
+1. First launch: choose an admin name and a PIN or password (4+ characters). There are no default credentials.
+2. **Search** songs or playlists and tap a song to play (playback continues through the results). The "…" menu adds to the queue or a playlist.
+3. **Settings → Manage profiles** (admin) to add people. Each profile signs in with its own PIN.
+4. **Settings → Offline cache** to keep played songs on the device.
+5. If YouTube says "Sign in to confirm you're not a bot": export your browser's YouTube cookies as a Netscape `cookies.txt` and choose it under **Settings → Cookies file**.
+
+### Discord Rich Presence (desktop)
+
+The app talks to the **Discord desktop app** over its local socket (unix socket on Linux and macOS, named pipe on Windows): no server, no login.
+Turn it on under **Settings → Discord**. It shows while a song plays and disappears on pause or stop. It only works while the Discord desktop app runs on the same machine
+(the Flatpak and Snap versions are found too). Android can't do this, because the Discord mobile app has no local socket for other apps.
+The status shows the song title to your Discord friends, which is why it is off by default.
+
+If you build the app yourself, Discord needs an application on its side, which gives the name shown on your profile:
+
+1. Create an application at <https://discord.com/developers/applications> named **404 Tunes** (the logo is `assets/branding/logo.png`).
+2. Copy its **Application ID** (not a secret).
+3. Bake it into your builds so users only flip the switch (the ID field is hidden in those builds), or, in a build without one, type it into **Settings → Discord → Discord application ID**:
+   ```bash
+   flutter run -d linux --dart-define=DISCORD_CLIENT_ID=123456789012345678       # local builds
+   gh api -X POST repos/OWNER/REPO/actions/variables -f name=DISCORD_CLIENT_ID -f value=123456789012345678
+   # or: Settings → Secrets and variables → Actions → Variables. The release workflow passes it as --dart-define.
+   ```
 
 ## How it works
 
@@ -24,6 +94,7 @@ Flutter UI
  ├─ YtDlpService          search / playlist / resolve / download, caches, retries (shared Dart code)
  │    └─ YtBackend        desktop: runs the bundled yt-dlp binary    android: youtubedl-android (Python + yt-dlp) via a Kotlin plugin
  ├─ PlayerController      queue + just_audio (desktop: libmpv via media_kit; Android: ExoPlayer) + audio_service
+ ├─ PresenceService       Discord Rich Presence over Discord's local socket (desktop)
  ├─ SQLite                profiles, playlists, saved queue
  └─ CacheManager          optional offline cache
 ```
@@ -37,9 +108,9 @@ Flutter UI
 
 (deno was tried as the runtime and rejected: deno 2.9.8 produced challenge answers that YouTube answered with HTTP 403, quickjs-ng's were accepted.)
 
-## Build
+## Build from source
 
-Needs the [Flutter SDK](https://docs.flutter.dev/get-started/install) (3.x) and, for Android, the Android SDK (platform 35, build-tools 35).
+Needs the [Flutter SDK](https://docs.flutter.dev/get-started/install) (3.x) and, for Android, the Android SDK (platform 36, build-tools 36).
 
 ```bash
 tool/fetch_binaries.sh          # downloads yt-dlp + quickjs for desktop (assets/bin/) and quickjs for Android (jniLibs/)
@@ -51,8 +122,10 @@ flutter build apk --release --split-per-abi   # Android APKs (arm64-v8a is what 
 ```
 
 Linux needs `libmpv` at runtime too (`sudo apt install libmpv2`, or `libmpv-dev` to build).
-The Windows and macOS binaries are fetched by the script, but those platforms can only be built on Windows / macOS.
+The Windows and macOS binaries are fetched by the script, but those platforms can only be built on Windows / macOS (the release workflow does it).
 macOS: the bundled quickjs is the Apple-silicon build.
+
+The app icon and logo are drawn by `tool/make_icons.py` (Pillow + numpy), which writes every platform's icon set.
 
 ### Release signing (Android)
 
@@ -69,10 +142,10 @@ Keep the keystore and its password backed up: an app can only be updated in plac
 
 ### Releases (GitHub Actions)
 
-`.github/workflows/release.yml` builds Android, Linux, Windows and macOS (Apple silicon) and attaches them to a release when you push a version tag:
+`.github/workflows/release.yml` builds Android, Linux, Windows (installer + portable zip) and macOS (Apple silicon) and attaches them to a release when you push a version tag:
 
 ```bash
-git tag v0.2.0 && git push origin v0.2.0
+git tag v0.3.0 && git push origin v0.3.0
 ```
 
 A tag build refuses to run without the signing secrets, so debug-signed APKs can't be published by accident. Add them once under
@@ -84,42 +157,16 @@ gh secret set ANDROID_KEYSTORE_PASSWORD        # the password in android/key.pro
 gh secret set ANDROID_KEY_ALIAS --body tunes404
 ```
 
-On Windows the release has an installer (`404tunes-windows-x64-setup.exe`: per-user, no admin rights, Start menu entry, uninstaller, Visual C++ runtime included) and a portable zip.
 "Run workflow" on the Actions tab builds everything for testing and keeps the files as artifacts without making a release.
-The Windows and macOS builds are unsigned: Windows SmartScreen and macOS Gatekeeper will warn on first launch (macOS: right-click → Open).
-
-### Discord Rich Presence (desktop)
-
-The app talks to the **Discord desktop app** over its local socket (unix socket on Linux/macOS, named pipe on Windows): no server, no login.
-It shows while a song plays and disappears on pause or stop. It needs an application on Discord's side, which gives the name shown on your profile:
-
-1. Create an application at <https://discord.com/developers/applications> named **404 Tunes** (you can upload the logo from `assets/branding/logo.png`).
-2. Copy its **Application ID** (not a secret).
-3. Bake it into your builds so users only flip the switch (the ID field is hidden in those builds), or, in a build without one, type it into **Settings → Discord → Discord application ID**:
-   ```bash
-   gh api -X POST repos/OWNER/REPO/actions/variables -f name=DISCORD_CLIENT_ID -f value=123456789012345678   # or: Settings → Secrets and variables → Actions → Variables; the release workflow passes it as --dart-define
-   flutter run -d linux --dart-define=DISCORD_CLIENT_ID=123456789012345678   # local builds
-   ```
-4. Turn on **Settings → Discord → Show what I'm playing**.
-
-It only works while the Discord desktop app runs on the same machine (the Flatpak and Snap versions are found too). Android can't do this: the Discord mobile app has no local
-socket for other apps. The status shows the song title to your Discord friends, which is why it is off by default.
+The Windows and macOS builds are unsigned: Windows SmartScreen and macOS Gatekeeper will warn on first launch.
 
 ## Tests
 
 ```bash
 flutter analyze
-flutter test                                  # parsers (real yt-dlp output fixtures), queue, profiles/admin rules, playlists, service logic, cache
+flutter test                                  # parsers (real yt-dlp output fixtures), queue, profiles/admin rules, playlists, service logic, cache, Discord client
 SMOKE=1 flutter test test/smoke_test.dart     # the same code against real YouTube (needs internet and the fetched binaries)
 ```
-
-## Using it
-
-1. First launch: choose an admin name and a PIN or password (4+ characters). There are no default credentials.
-2. **Search** songs or playlists, tap a song to play (playback continues through the results). The "…" menu adds to queue / playlist.
-3. **Settings → Manage profiles** (admin) to add people. Each profile signs in with its own PIN.
-4. **Settings → Offline cache** to keep played songs on the device.
-5. If YouTube says "Sign in to confirm you're not a bot": export your browser's YouTube cookies as a Netscape `cookies.txt` and choose it under **Settings → Cookies file**.
 
 ## Ideas borrowed from shinsoku
 
@@ -130,5 +177,5 @@ The yt-dlp behaviour (search filters, flat playlist expansion, link expiry and `
 
 - No iOS: iOS apps can't run yt-dlp.
 - Live streams can't be played.
-- The Android APK builds and its contents are verified, but it has not been run on a phone or emulator (no emulator was available in development). The desktop (Linux) build was run and tested end to end.
-- Discord Rich Presence was tested on Linux against a stand-in for Discord (real socket, real app) but not against a real Discord client; the Windows named-pipe path is untested.
+- **Tested:** the Linux build end to end, and Windows with real playback and a real Discord client. **Not tested on real hardware:** the Android APK (it builds and its contents are verified, but no phone or emulator was available) and the macOS build (it builds in CI).
+- Discord Rich Presence on Linux and macOS was tested against a stand-in for Discord only.

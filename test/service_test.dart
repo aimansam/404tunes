@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -15,6 +16,7 @@ class FakeBackend implements YtBackend {
   Duration delay = Duration.zero;
   Object? failWith;
   Object? failWithoutJs; // errors only when yt-dlp runs without the JS runtime
+  bool blankChannelsOnce = false; // the next search answers without channel names, like YouTube sometimes does
 
   @override
   Future<void> init() async {}
@@ -28,7 +30,18 @@ class FakeBackend implements YtBackend {
     if (failWith != null) throw failWith!;
     if (!js && failWithoutJs != null) throw failWithoutJs!;
     final url = args.last;
-    if (url.startsWith('ytsearch')) return fixtureText('search.json');
+    if (url.startsWith('ytsearch')) {
+      final text = fixtureText('search.json');
+      if (blankChannelsOnce) {
+        blankChannelsOnce = false;
+        final j = jsonDecode(text) as Map<String, dynamic>;
+        for (final e in j['entries'] as List) {
+          (e as Map<String, dynamic>)..remove('channel')..remove('uploader');
+        }
+        return jsonEncode(j);
+      }
+      return text;
+    }
     if (url.contains('/results?')) return fixtureText('playlist_search.json');
     if (url.contains('/playlist?')) return fixtureText('playlist.json');
     if (url.contains('/watch?')) {
@@ -73,6 +86,16 @@ void main() {
     expect(be.calls, hasLength(1));
     now = now.add(const Duration(minutes: 11));
     await yt.search('lo-fi');
+    expect(be.calls, hasLength(2));
+  });
+
+  test('a search answered without channel names is asked once more', () async {
+    be.blankChannelsOnce = true;
+    final r = await yt.search('Lo-Fi');
+    expect(be.calls, hasLength(2));
+    expect(r.where((t) => t.channel.isEmpty), isEmpty);
+    expect(be.calls.length, 2);
+    await yt.search('lo-fi'); // the better answer is what got cached
     expect(be.calls, hasLength(2));
   });
 

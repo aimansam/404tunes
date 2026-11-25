@@ -27,7 +27,7 @@ class _SeekBarState extends State<SeekBar> {
         final max = (total?.inMilliseconds ?? 0) / 1000.0;
         final value = (_drag ?? pos.inMilliseconds / 1000.0).clamp(0.0, max > 0 ? max : 1.0);
         return Row(children: [
-          SizedBox(width: 44, child: Text(fmtDuration(value), textAlign: TextAlign.right, style: const TextStyle(fontSize: 12))),
+          SizedBox(width: 56, child: Text(fmtDuration(value), maxLines: 1, softWrap: false, textAlign: TextAlign.right, style: const TextStyle(fontSize: 12))),
           Expanded(
             child: Slider(
               value: value,
@@ -39,7 +39,7 @@ class _SeekBarState extends State<SeekBar> {
               },
             ),
           ),
-          SizedBox(width: 44, child: Text(fmtDuration(max), style: const TextStyle(fontSize: 12))),
+          SizedBox(width: 56, child: Text(fmtDuration(max), maxLines: 1, softWrap: false, style: const TextStyle(fontSize: 12))),
         ]);
       },
     );
