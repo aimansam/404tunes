@@ -11,7 +11,7 @@ S = 3072          # master size; everything is downscaled from this for clean ed
 K = S / 1024      # SVG units -> pixels
 
 
-FRINGE_L, FRINGE_R = (255, 55, 95), (10, 132, 255)     # glitch fringes: rose-red (left) and blue (right)
+FRINGE_L, FRINGE_R = (196, 198, 212), (112, 114, 132)     # glitch fringes: light and dark smoke grey
 NOTE_TOP, NOTE_BOT = (255, 255, 255), (240, 234, 255)     # white with a faint lavender fall-off
 
 
