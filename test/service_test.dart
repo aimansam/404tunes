@@ -17,6 +17,7 @@ class FakeBackend implements YtBackend {
   Object? failWith;
   Object? failWithoutJs; // errors only when yt-dlp runs without the JS runtime
   bool blankChannelsOnce = false; // the next search answers without channel names, like YouTube sometimes does
+  Set<String>? botCheckExcept; // when set, only these player clients get past YouTube's bot check
 
   @override
   Future<void> init() async {}
@@ -30,6 +31,9 @@ class FakeBackend implements YtBackend {
     if (failWith != null) throw failWith!;
     if (!js && failWithoutJs != null) throw failWithoutJs!;
     final url = args.last;
+    if (botCheckExcept != null && url.contains('/watch?') && !botCheckExcept!.contains(clientOf(args))) {
+      throw YtException(botCheckMessage);
+    }
     if (url.startsWith('ytsearch')) {
       final text = fixtureText('search.json');
       if (blankChannelsOnce) {
@@ -57,6 +61,12 @@ class FakeBackend implements YtBackend {
 
   @override
   Future<String> version() async => '2026.01.01';
+}
+
+/// The player client a call asked yt-dlp for, or "default".
+String clientOf(List<String> args) {
+  final i = args.indexOf('--extractor-args');
+  return i < 0 ? 'default' : args[i + 1].split('=').last;
 }
 
 void main() {
@@ -192,6 +202,58 @@ void main() {
       addTearDown(() => dir.deleteSync(recursive: true));
       await yt.download('dQw4w9WgXcQ', dir.path);
       expect(be.jsFlags, [false, true]);
+    });
+  });
+
+  group('bot check', () {
+    List<String> clients() => be.calls.map(clientOf).toList();
+
+    test('other player clients are tried until one gets through', () async {
+      be.botCheckExcept = {'mweb'};
+      expect((await yt.resolve('dQw4w9WgXcQ')).track.id, 'dQw4w9WgXcQ');
+      expect(clients(), ['default', 'default', 'android', 'mweb']);
+      expect(be.jsFlags, [false, true, false, true]);
+    });
+
+    test('the client that worked goes first for 30 minutes', () async {
+      be.botCheckExcept = {'android'};
+      await yt.resolve('dQw4w9WgXcQ');
+      be.calls.clear();
+      await yt.resolve('aaaaaaaaaaa');
+      expect(clients(), ['android']);
+      be.calls.clear();
+      be.botCheckExcept = null; // the block is over
+      now = now.add(const Duration(minutes: 31));
+      await yt.resolve('bbbbbbbbbbb');
+      expect(clients(), ['default']);
+    });
+
+    test('when the remembered client stops working the normal way is used again', () async {
+      be.botCheckExcept = {'android'};
+      await yt.resolve('dQw4w9WgXcQ');
+      be.calls.clear();
+      be.botCheckExcept = {'default'};
+      await yt.resolve('aaaaaaaaaaa');
+      expect(clients(), ['android', 'default']);
+    });
+
+    test('a link that fails the check is not accepted', () async {
+      be.botCheckExcept = {'android'};
+      probeOk = false;
+      await expectLater(yt.resolve('dQw4w9WgXcQ'), throwsA(isA<YtException>()));
+    });
+
+    test('when no client gets through the bot check is reported', () async {
+      be.botCheckExcept = {};
+      await expectLater(yt.resolve('dQw4w9WgXcQ'),
+          throwsA(isA<YtException>().having((e) => e.isBotCheck, 'isBotCheck', isTrue)));
+      expect(clients(), ['default', 'default', 'android', 'mweb', 'tv_simply']);
+    });
+
+    test('other errors do not start the fallbacks', () async {
+      be.failWith = YtException('ERROR: Video unavailable');
+      await expectLater(yt.resolve('dQw4w9WgXcQ'), throwsA(isA<YtException>()));
+      expect(clients(), ['default', 'default']);
     });
   });
 

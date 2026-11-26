@@ -6,8 +6,27 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tunes404/yt/backend.dart';
 import 'package:tunes404/yt/backend_desktop.dart';
+import 'package:tunes404/yt/models.dart';
 import 'package:tunes404/yt/ytdlp_service.dart';
+
+/// Real yt-dlp, except that calls without a chosen player client get a pretend bot check.
+class _BotChecked implements YtBackend {
+  _BotChecked(this.real);
+  final YtBackend real;
+  @override
+  Future<void> init() => real.init();
+  @override
+  Future<String> run(List<String> args, {Duration timeout = const Duration(seconds: 120), bool js = true}) =>
+      args.contains('--extractor-args')
+          ? real.run(args, timeout: timeout, js: js)
+          : Future.error(YtException(botCheckMessage));
+  @override
+  Future<String> update() => real.update();
+  @override
+  Future<String> version() => real.version();
+}
 
 void main() {
   final on = Platform.environment['SMOKE'] == '1';
@@ -56,6 +75,12 @@ void main() {
         dir.deleteSync(recursive: true);
       }
     }, timeout: const Timeout(Duration(minutes: 5)));
+
+    test('a fallback client delivers a stream when the usual ones get the bot check', () async {
+      final blocked = YtDlpService(_BotChecked(DesktopBackend(exeOverride: exe, qjsOverride: qjs)));
+      final stream = await blocked.resolve('dQw4w9WgXcQ'); // the service only accepts links that answer a Range request
+      expect(stream.url, startsWith('https://'));
+    }, timeout: const Timeout(Duration(minutes: 3)));
 
     test('unknown video gives a readable error, not a hang', () async {
       await expectLater(yt.resolve('zzzzzzzzzzz'), throwsA(anything));

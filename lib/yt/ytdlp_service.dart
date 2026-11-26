@@ -29,7 +29,14 @@ class YtDlpService implements YtService {
   static const _audioFormat =
       'bestaudio[ext=webm]/bestaudio[ext=m4a]/bestaudio/best';
 
+  /// YouTube player clients to try when the usual ones are answered with the bot check: name, and whether it needs
+  /// the JS runtime. yt-dlp doesn't pick these itself. They mostly offer one combined 360p file with sound, so they
+  /// are only a fallback. (`web_embedded` is left out: it offers HLS, which `parseResolve` doesn't take.)
+  static const _fallbackClients = [('android', false), ('mweb', true), ('tv_simply', true)];
+  static const _fallbackTtl = Duration(minutes: 30);
+
   String? _cookies;
+  _Cached<(String, bool)>? _fallback; // the client that last got past the bot check
   final _search = <String, _Cached<List<Track>>>{};
   final _plSearch = <String, _Cached<List<PlaylistResult>>>{};
   final _playlists = <String, _Cached<PlaylistContents>>{};
@@ -40,6 +47,7 @@ class YtDlpService implements YtService {
   set cookiesPath(String? path) {
     _cookies = (path != null && path.isNotEmpty) ? path : null;
     _streams.clear(); // links resolved without cookies may be worse
+    _fallback = null;
   }
 
   List<String> get _base => [
@@ -134,8 +142,17 @@ class YtDlpService implements YtService {
 
   /// Two steps. First without a JS runtime (about 2 s: yt-dlp falls back to a YouTube client whose links
   /// need no challenge), and the link is checked with a 2-byte Range request. If that fails for any reason,
-  /// again with the JS runtime (about 10 s, but solves YouTube's challenges).
+  /// again with the JS runtime (about 10 s, but solves YouTube's challenges). If YouTube answers with its bot
+  /// check, the [_fallbackClients] are tried one by one, and the one that works goes first for a while.
   Future<ResolvedStream> _lookup(String videoId) async {
+    final known = _fallback;
+    if (known != null) {
+      if (known.expires.isAfter(_now())) {
+        final s = await _tryClient(videoId, known.value);
+        if (s != null) return s;
+      }
+      _fallback = null;
+    }
     try {
       final fast = parseResolve(await _json(_resolveArgs(videoId)), now: _now());
       if (await _probe(fast)) return fast;
@@ -144,7 +161,31 @@ class YtDlpService implements YtService {
     } catch (_) {
       // fall through to the slow path
     }
-    return parseResolve(await _json(_resolveArgs(videoId), js: true), now: _now());
+    try {
+      return parseResolve(await _json(_resolveArgs(videoId), js: true), now: _now());
+    } on YtException catch (e) {
+      if (!e.isBotCheck) rethrow;
+      for (final client in _fallbackClients) {
+        final s = await _tryClient(videoId, client);
+        if (s != null) {
+          _fallback = _Cached(client, _now().add(_fallbackTtl));
+          return s;
+        }
+      }
+      rethrow;
+    }
+  }
+
+  /// A verified stream from one player client, or null if that client can't deliver one.
+  Future<ResolvedStream?> _tryClient(String videoId, (String, bool) client) async {
+    final (name, js) = client;
+    try {
+      final args = ['--extractor-args', 'youtube:player_client=$name', ..._resolveArgs(videoId)];
+      final s = parseResolve(await _json(args, js: js), now: _now());
+      return await _probe(s) ? s : null;
+    } catch (_) {
+      return null;
+    }
   }
 
   @override
@@ -172,6 +213,7 @@ class YtDlpService implements YtService {
   Future<String> update() async {
     final v = await backend.update();
     _streams.clear();
+    _fallback = null;
     return v;
   }
 

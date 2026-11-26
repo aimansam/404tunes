@@ -265,8 +265,9 @@ class PlayerController extends ChangeNotifier {
       _afterStart(item.track);
     } catch (e) {
       if (gen != _gen) return;
-      if (!fresh) {
-        // The link may have gone stale: look the song up again once.
+      if (!fresh && !(e is YtException && e.isBotCheck)) {
+        // The link may have gone stale: look the song up again once. (After a bot check every option was
+        // already tried, and asking again right away only makes YouTube more suspicious.)
         return _loadCurrent(autoplay: autoplay, fresh: true, resumeAt: resumeAt);
       }
       loading = false;
