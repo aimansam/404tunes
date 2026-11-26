@@ -42,7 +42,7 @@ Windows will show "Windows protected your PC" because the builds are not code-si
 - **Android**: media notification, lock-screen and headset controls, background playback
 - **Discord Rich Presence** on desktop (off by default): "Listening to 404 Tunes" with the song, artist, cover and a progress bar
 - **Updates itself**: Windows (installer version) and Android download and install new releases from inside the app; macOS, Linux and the portable Windows zip tell you when one is out
-- **Stays working**: yt-dlp updates itself daily, and an optional `cookies.txt` handles YouTube's "confirm you're not a bot"
+- **Stays working**: yt-dlp updates itself daily. When YouTube asks to "confirm you're not a bot", the app tries other ways to get the song, and you can add a `cookies.txt`
 - **Desktop shortcuts**: `Space` play/pause (not while typing), `Ctrl+←` / `Ctrl+→` previous / next
 
 <div align="center">
@@ -68,7 +68,19 @@ Windows will show "Windows protected your PC" because the builds are not code-si
 2. **Search** songs or playlists and tap a song to play (playback continues through the results). The "…" menu adds to the queue or a playlist.
 3. **Settings → Manage profiles** (admin) to add people. Each profile signs in with its own PIN.
 4. **Settings → Offline cache** to keep played songs on the device.
-5. If YouTube says "Sign in to confirm you're not a bot": export your browser's YouTube cookies as a Netscape `cookies.txt` and choose it under **Settings → Cookies file**.
+
+### "Confirm you're not a bot"
+
+YouTube sometimes refuses to hand out a song until you prove you're not a bot. The app first tries to get the song another way by itself
+(this can take 15 seconds or more the first time). While that fallback is in use, sound quality is lower, more data is used, and songs may not be saved to the offline cache.
+There is no guaranteed way past the check. If the message stays:
+
+1. **Add your cookies.** Exported like this, they last longer:
+   1. Open a private window and sign in to YouTube. A spare account is safer, because an account used this way can be banned.
+   2. In the same tab, go to <https://www.youtube.com/robots.txt>.
+   3. Export the `youtube.com` cookies as a Netscape-format `cookies.txt` (a [browser extension](https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp) does this), then close the window.
+   4. In the app, choose the file under **Settings → Cookies file**. Keep it private: it gives access to that account.
+2. **Change your connection:** turn off a VPN, try another network, or wait a while.
 
 ### Updates
 
@@ -119,7 +131,9 @@ Flutter UI
    `Range` request.
 2. If that fails (or yt-dlp finds no audio), yt-dlp again **with** the bundled [quickjs-ng](https://github.com/quickjs-ng/quickjs) runtime to solve YouTube's
    challenges (~10 s on a PC; slower on a phone).
-3. The next song in the queue is looked up while the current one plays, so the next one starts instantly.
+3. If YouTube answers step 2 with its bot check, yt-dlp is asked again with other player clients (`android`, `mweb`, then `tv_simply`). The first link that
+   passes the `Range` check wins, and that client goes first for 30 minutes. They mostly offer one combined 360p file with sound, so they are only a fallback.
+4. The next song in the queue is looked up while the current one plays, so the next one starts instantly.
 
 (deno was tried as the runtime and rejected: deno 2.9.8 produced challenge answers that YouTube answered with HTTP 403, quickjs-ng's were accepted.)
 
@@ -174,7 +188,7 @@ Also set the repository name in `lib/update/updater.dart`. If the key is lost, i
 The tag (`vMAJOR.MINOR.PATCH`) becomes the app's version:
 
 ```bash
-git tag v0.3.0 && git push origin v0.3.0
+git tag v1.2.3 && git push origin v1.2.3     # use the next version number
 ```
 
 A tag build refuses to run without the signing secrets, so debug-signed APKs can't be published by accident. Add them once under
@@ -193,7 +207,7 @@ The Windows and macOS builds are unsigned: Windows SmartScreen and macOS Gatekee
 
 ```bash
 flutter analyze
-flutter test                                  # parsers (real yt-dlp output fixtures), queue, profiles/admin rules, playlists, service logic, cache, Discord client
+flutter test                                  # parsers (real yt-dlp output fixtures), queue, profiles/admin rules, playlists, service logic and errors, cache, updater, Discord client
 SMOKE=1 flutter test test/smoke_test.dart     # the same code against real YouTube (needs internet and the fetched binaries)
 ```
 
@@ -203,3 +217,5 @@ SMOKE=1 flutter test test/smoke_test.dart     # the same code against real YouTu
 - Live streams can't be played.
 - **Tested:** the Linux build end to end, and Windows with real playback and a real Discord client. **Not tested on real hardware:** the Android APK (it builds and its contents are verified, but no phone or emulator was available) and the macOS build (it builds in CI).
 - Discord Rich Presence on Linux and macOS was tested against a stand-in for Discord only.
+- Installing an update from inside the app was tested on Windows under Wine only, and not yet on Android.
+- The bot check fallback was tested against a simulated check only.
