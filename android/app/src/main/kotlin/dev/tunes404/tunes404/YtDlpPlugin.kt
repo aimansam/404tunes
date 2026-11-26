@@ -107,6 +107,14 @@ class YtDlpPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
         return lines.lastOrNull { it.contains("ERROR") } ?: lines.lastOrNull() ?: "yt-dlp failed"
     }
 
+    /** Errors like ExceptionInInitializerError carry no message: walk to the root cause so the UI shows something useful. */
+    private fun describe(e: Throwable): String {
+        var root: Throwable = e
+        while (root.cause != null && root.cause !== root) root = root.cause!!
+        val msg = e.message ?: root.message
+        return if (msg != null) msg else "${e.javaClass.simpleName}: ${root.javaClass.name}"
+    }
+
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         pool.execute {
             try {
@@ -133,7 +141,7 @@ class YtDlpPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
                 }
                 main.post { result.success(value) }
             } catch (e: Throwable) {
-                main.post { result.error("ytdlp", e.message ?: e.toString(), null) }
+                main.post { result.error("ytdlp", describe(e), null) }
             }
         }
     }
