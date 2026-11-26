@@ -16,7 +16,7 @@ class AndroidBackend implements YtBackend {
     try {
       return await _ch.invokeMethod<T>(method, args);
     } on PlatformException catch (e) {
-      throw YtException(e.message ?? e.code);
+      throw YtException(explainYtError(e.message ?? e.code));
     }
   }
 

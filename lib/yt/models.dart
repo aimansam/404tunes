@@ -76,6 +76,16 @@ class UnplayableException implements Exception {
   String toString() => 'UnplayableException: $message';
 }
 
+/// Puts yt-dlp errors that the user can do something about into the app's own words.
+/// Others are returned as they are.
+String explainYtError(String line) {
+  // "Sign in to confirm you’re not a bot. Use --cookies-from-browser or --cookies ..."
+  if (line.contains('Sign in to confirm') && line.contains('not a bot')) {
+    return "YouTube asks to confirm you're not a bot. Add or renew the cookies file in Settings.";
+  }
+  return line;
+}
+
 class YtException implements Exception {
   YtException(this.message);
   final String message;

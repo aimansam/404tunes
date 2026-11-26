@@ -62,17 +62,20 @@ class DesktopBackend implements YtBackend {
     final proc = await Process.start(
       _exe!,
       [
+        // Without this the Windows build writes in the system code page. It ignores PYTHONUTF8 and friends.
+        '--encoding', 'utf-8',
         '--no-js-runtimes',
         if (js) ...['--js-runtimes', 'quickjs:$_qjs'],
         ...args,
       ],
-      environment: {'PYTHONUTF8': '1'},
     );
     final out = StringBuffer();
     final err = StringBuffer();
+    // Lenient: a stray byte must never replace yt-dlp's own answer with a decoding error.
+    const decoder = Utf8Decoder(allowMalformed: true);
     final done = Future.wait([
-      proc.stdout.transform(utf8.decoder).forEach(out.write),
-      proc.stderr.transform(utf8.decoder).forEach(err.write),
+      proc.stdout.transform(decoder).forEach(out.write),
+      proc.stderr.transform(decoder).forEach(err.write),
     ]);
     final code = await proc.exitCode.timeout(timeout, onTimeout: () {
       proc.kill();
@@ -84,7 +87,7 @@ class DesktopBackend implements YtBackend {
       final msg = lines.where((l) => l.contains('ERROR')).lastOrNull ??
           lines.lastOrNull ??
           'yt-dlp failed ($code)';
-      throw YtException(code == -1 ? 'yt-dlp timed out' : msg);
+      throw YtException(code == -1 ? 'yt-dlp timed out' : explainYtError(msg));
     }
     return out.toString();
   }
