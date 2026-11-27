@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Only HTTPS to the outside world. -->
+    <base-config cleartextTrafficPermitted="false" />
+    <!-- just_audio sends the stream's request headers through its own proxy on this device, over plain HTTP.
+         Without this exception every song fails with "(0) Source error". -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">127.0.0.1</domain>
+    </domain-config>
+</network-security-config>
